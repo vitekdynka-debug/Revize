@@ -1,8 +1,8 @@
 import { attachKeyboardWedge } from '@revize/scanner';
-import { registerSW } from 'virtual:pwa-register';
 import { feedback, isCardOpen, runCheck } from './check-flow.js';
 import { dismissItemCard } from './item-card.js';
 import './styles.css';
+import { setupUpdates } from './update.js';
 import { exportsView } from './views/exports.js';
 import { homeView } from './views/home.js';
 import { inspectionView } from './views/inspection.js';
@@ -12,7 +12,7 @@ import { scanView } from './views/scan.js';
 import { settingsView } from './views/settings.js';
 import { sheetView } from './views/sheet.js';
 
-registerSW({ immediate: true });
+setupUpdates();
 
 const root = document.getElementById('app')!;
 const routes: Record<string, (root: HTMLElement) => () => void> = {

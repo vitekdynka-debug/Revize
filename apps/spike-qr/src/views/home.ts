@@ -2,6 +2,7 @@ import { h } from '../dom.js';
 import { isStandalone } from '../env.js';
 import { activeInspection, startInspection, summarize } from '../inspection.js';
 import { MOCK_CUSTOMER } from '../mock-items.js';
+import { forceReload } from '../update.js';
 import { progressBar, summaryLine } from './inspection.js';
 
 export function homeView(root: HTMLElement): () => void {
@@ -84,8 +85,28 @@ export function homeView(root: HTMLElement): () => void {
       h(
         'p',
         { class: 'muted small' },
-        'Bluetooth čtečka (režim klávesnice) funguje na kterékoli obrazovce. Build ',
-        __BUILD_TIME__,
+        'Bluetooth čtečka (režim klávesnice) funguje na kterékoli obrazovce.',
+      ),
+      h(
+        'div',
+        { class: 'row version' },
+        h(
+          'span',
+          { class: 'muted small' },
+          `Verze ${new Date(__BUILD_TIME__).toLocaleString('cs-CZ')}`,
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn-small',
+            onclick: () => {
+              if (confirm('Načíst nejnovější verzi aplikace? Uložené kontroly zůstanou.')) {
+                void forceReload();
+              }
+            },
+          },
+          'Aktualizovat aplikaci',
+        ),
       ),
     ),
   );

@@ -58,6 +58,9 @@ h2 {
 .hidden {
   display: none !important;
 }
+.version {
+  align-items: center;
+}
 .row {
   display: flex;
   gap: 12px;
