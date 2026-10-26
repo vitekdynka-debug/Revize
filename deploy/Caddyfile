@@ -1,0 +1,27 @@
+# SITE_ADDRESS decides how HTTPS works (docs/adr/0008-remote-access-https.md):
+#   localhost              – Caddy's own local CA (browser warning; fine for a first test on the PC)
+#   revize.tailnet.ts.net  – Tailscale certificate (see docs/provoz.md)
+#   revize.duckdns.org     – public Let's Encrypt certificate (ports 80/443 forwarded)
+#   :80                    – plain HTTP, e.g. behind Cloudflare Tunnel
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv
+		# The service worker and the app shell must never be cached, otherwise updates hang.
+		@nocache path /sw.js /index.html /manifest.webmanifest
+		header @nocache Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+	}
+}

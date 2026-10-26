@@ -25,11 +25,22 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
 - `packages/scanner` – framework-agnostic QR scanning core (camera, decode worker, dedupe,
   keyboard-wedge scanner). Used by the spike now and by `apps/web` later.
 - `apps/spike-qr` – milestone M1 QR spike (static PWA, deployed to GitHub Pages).
-- `apps/api` (M2+) – Fastify, modules `routes → service → repository (Drizzle)`.
+- `apps/api` – Fastify 5 + Zod type provider, Drizzle + node-postgres.
+  - `src/modules/<domain>/{routes,service,repository}.ts`; routes validate with schemas from
+    `@revize/shared` (they also generate the OpenAPI doc at `/api/docs`).
+  - `src/db/schema.ts` is the whole data model; migrations in `drizzle/` (`pnpm --filter
+@revize/api db:generate` after schema changes, commit the SQL). Applied on server start.
+  - `src/auth/` sessions (cookie or bearer), `requirePermission()`, Origin check for cookie writes.
+  - Errors: throw `AppError` helpers from `src/errors.ts` (Czech message + machine code).
+  - Every change in a service goes with `recordAudit(tx, …)` in the same transaction.
+  - `src/bootstrap.ts` creates org + first admin on an empty DB; `src/seed/demo.ts` demo data.
+  - Tests in `test/` hit a real PostgreSQL (fresh database per run, `TEST_DATABASE_URL`).
 - `apps/web` (M3+) – React + Vite; `/field/*` (touch, PWA) and `/office/*` (tables).
   Platform access (camera, scanner, files, storage, feedback) only through `src/platform/` adapters
   (`web` now, `capacitor` later). Never call `navigator.mediaDevices` etc. from components.
-- `docs/` – `architecture.md`, `adr/NNNN-*.md`, `licenses.md`, milestone notes.
+- `deploy/` – Caddyfile and the web image (serves the front end, proxies `/api`).
+- `docker-compose.yml` + `.env.example` – db, api, web; `scripts/smoke-test.sh` checks a running stack.
+- `docs/` – `architecture.md`, `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
 
 ## Architecture rules
 
@@ -47,13 +58,17 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
 ```sh
 pnpm install          # install all workspaces
 pnpm check            # format:check + lint + typecheck + test (run before every commit)
-pnpm test             # vitest (all projects)
+pnpm test             # vitest (all projects; API tests need PostgreSQL → pnpm db:test)
+pnpm db:test          # throwaway PostgreSQL 16 in Docker on :5432 (db:test:stop)
+pnpm api:dev          # API with reload on :3000 (apps/api/.env from .env.example)
 pnpm typecheck
 pnpm lint
 pnpm run check:licenses   # dependency license policy (docs/licenses.md)
 pnpm spike:dev        # QR spike dev server (camera needs localhost or HTTPS, see apps/spike-qr/README.md)
 pnpm spike:build      # static build into apps/spike-qr/dist
 pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a QR video (needs ffmpeg)
+docker compose up -d --build         # whole system (needs .env)
+pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a running stack
 ```
 
 ## Conventions
@@ -63,6 +78,8 @@ pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a QR vide
   Vitest only runs packages that have their own `vitest.config.ts`; Playwright specs live in `e2e/`.
 - Playwright is pinned to the preinstalled browser build (`@playwright/test` 1.63.0).
 - TypeScript is pinned to 6.0.x until typescript-eslint supports 7.
+- API responses never contain secrets; DTO mappers (`toUserDto`…) define what leaves the server.
+- Dates leave the API as ISO strings; e-mails are stored trimmed and lower-cased.
 - Commits: English, imperative, one milestone step per commit; `pnpm check` must pass.
 - After each milestone: update this file, `docs/architecture.md` and add/adjust ADRs.
 
@@ -71,3 +88,6 @@ pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a QR vide
 - M0 repo skeleton – done.
 - M1 QR spike – iteration 2 after the first iPad test (findings in ADR-0009); waiting for round 2
   results (`docs/spike-qr-test-protocol.md`). Decision PWA vs Capacitor pending.
+- M2 backend foundation – done: full DB schema + migration, auth (sessions, roles/permissions),
+  users, audit, OpenAPI, FileStorage (local disk), Docker Compose stack, demo seed.
+- Next: M3 master data in the office UI (`apps/web`).

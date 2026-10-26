@@ -1,0 +1,61 @@
+# Whole system on one machine: `docker compose up -d` (configuration in .env, see .env.example).
+name: revize
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: revize
+      POSTGRES_USER: revize
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Nastavte POSTGRES_PASSWORD v souboru .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U revize -d revize']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://revize:${POSTGRES_PASSWORD}@db:5432/revize
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ORG_NAME: ${ORG_NAME:-Revizní firma}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revize.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - files:/data/files
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  files:
+  caddy-data:
+  caddy-config:

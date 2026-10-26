@@ -16,7 +16,11 @@
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "spike:dev": "pnpm --filter @revize/spike-qr dev",
     "spike:build": "pnpm --filter @revize/spike-qr build",
-    "check:licenses": "node scripts/check-licenses.mjs"
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "api:dev": "pnpm --filter @revize/api dev",
+    "db:test": "docker run --rm -d --name revize-test-db -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16-alpine",
+    "db:test:stop": "docker stop revize-test-db",
+    "smoke": "bash scripts/smoke-test.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

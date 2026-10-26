@@ -8,6 +8,16 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,3 +44,15 @@ jobs:
       - run: pnpm --filter @revize/spike-qr e2e
         env:
           CI: 'true'
+
+  docker:
+    # Acceptance criterion 7: the whole system starts with `docker compose up`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env && sed -i 's/^ADMIN_PASSWORD=$/ADMIN_PASSWORD=ci-admin-heslo/' .env
+      - run: docker compose build
+      - run: docker compose up -d --wait --wait-timeout 180
+      - run: scripts/smoke-test.sh https://localhost admin@revize.local ci-admin-heslo
+      - if: failure()
+        run: docker compose logs
