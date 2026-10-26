@@ -19,7 +19,15 @@ import { AppError } from './errors.js';
 import { auditRoutes } from './modules/audit/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { createAuthService } from './modules/auth/service.js';
+import { customersRoutes } from './modules/customers/routes.js';
+import { createCustomersService } from './modules/customers/service.js';
+import { equipmentTypesRoutes } from './modules/equipment-types/routes.js';
+import { createEquipmentTypesService } from './modules/equipment-types/service.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { itemsRoutes } from './modules/items/routes.js';
+import { createItemsService } from './modules/items/service.js';
+import { locationsRoutes } from './modules/locations/routes.js';
+import { createLocationsService } from './modules/locations/service.js';
 import { usersRoutes } from './modules/users/routes.js';
 import { createUsersService } from './modules/users/service.js';
 
@@ -106,6 +114,10 @@ export async function buildApp({ config, db, logger }: AppDeps) {
       await api.register(authRoutes, { auth, config });
       await api.register(usersRoutes, { users });
       await api.register(auditRoutes, { db });
+      await api.register(customersRoutes, { customers: createCustomersService(db) });
+      await api.register(locationsRoutes, { locations: createLocationsService(db) });
+      await api.register(equipmentTypesRoutes, { types: createEquipmentTypesService(db) });
+      await api.register(itemsRoutes, { items: createItemsService(db) });
     },
     { prefix: '/api' },
   );

@@ -8,6 +8,8 @@ import { createDatabase, type Database } from '../src/db/client.js';
 
 export const ADMIN = { email: 'admin@test.cz', password: 'admin-heslo-123' };
 
+let loginCounter = 0;
+
 export interface TestContext {
   app: App;
   database: Database;
@@ -42,9 +44,13 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
       await bootstrap(database.db, { ...config, SEED_DEMO: options.seedDemo ?? false }, app.log);
     },
     async login(email, password) {
+      // Every test login comes from its own address so that the login rate limit
+      // (10 per minute and IP) is not hit by the suite itself.
+      loginCounter += 1;
       const response = await app.inject({
         method: 'POST',
         url: '/api/auth/login',
+        remoteAddress: `10.0.${Math.floor(loginCounter / 250)}.${loginCounter % 250}`,
         payload: { email, password },
       });
       if (response.statusCode !== 200) throw new Error(`login failed: ${response.body}`);
