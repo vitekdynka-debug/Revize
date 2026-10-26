@@ -20,7 +20,8 @@ Skenování musí být rychlejší než ruční zadání pětimístného čísla
   (≤ 50 ms mezi znaky) zakončenou Enterem, kdekoli v terénním režimu.
 - **Obsah štítku (fáze 2):** URL `https://<server>/q/<code>`. Kamera iOS pak umí otevřít
   aplikaci i bez spuštěného skeneru. `code` je hodnota `item.qr_code`, která nemusí být rovna
-  číslu artiklu. Čistý pětimístný obsah se bere jako číslo artiklu (`parseScanPayload` v `shared`).
+  číslu artiklu. Čistě číselný obsah se nejdřív hledá jako QR kód a potom jako číslo artiklu
+  (`parseScanPayload` v `shared`, ADR-0012).
 - Jádro je v `packages/scanner`, nezávislé na frameworku. Capacitor adaptér by implementoval
   stejné rozhraní `ScannerService` nativní čtečkou.
 

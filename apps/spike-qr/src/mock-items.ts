@@ -1,47 +1,12 @@
-import { fieldDefinitionsSchema, type FieldDefinition } from '@revize/shared';
+import { equipmentTypePreset, type FieldDefinition } from '@revize/shared';
 
 export const TYPE_NAMES = ['Regál', 'Žebřík'] as const;
 export type TypeName = (typeof TYPE_NAMES)[number];
 
-/** Equipment types with the same field definitions as the server demo seed (apps/api). */
+/** The spike uses two types from the shared library (same fields as the server). */
 export const EQUIPMENT_TYPES: Record<TypeName, FieldDefinition[]> = {
-  Regál: fieldDefinitionsSchema.parse([
-    { key: 'manufacturer', label: 'Výrobce', kind: 'text', required: true, order: 0 },
-    {
-      key: 'rack_type',
-      label: 'Typ regálu',
-      kind: 'select',
-      required: true,
-      options: ['Paletový', 'Policový', 'Konzolový', 'Vjezdový'],
-      order: 1,
-    },
-    { key: 'height_mm', label: 'Výška', kind: 'integer', unit: 'mm', order: 2 },
-    { key: 'bay_load_kg', label: 'Nosnost pole', kind: 'integer', unit: 'kg', order: 3 },
-    { key: 'levels', label: 'Počet úrovní', kind: 'integer', order: 4 },
-    { key: 'load_sign', label: 'Štítek nosnosti', kind: 'boolean', order: 5 },
-    { key: 'year', label: 'Rok výroby', kind: 'integer', order: 6 },
-  ]),
-  Žebřík: fieldDefinitionsSchema.parse([
-    { key: 'manufacturer', label: 'Výrobce', kind: 'text', required: true, order: 0 },
-    {
-      key: 'ladder_type',
-      label: 'Typ žebříku',
-      kind: 'select',
-      required: true,
-      options: ['Opěrný', 'Dvojitý', 'Schůdky', 'Výsuvný', 'Pojízdný'],
-      order: 1,
-    },
-    { key: 'rungs', label: 'Počet příček', kind: 'integer', required: true, order: 2 },
-    { key: 'max_load_kg', label: 'Max. zatížení', kind: 'integer', unit: 'kg', order: 3 },
-    {
-      key: 'material',
-      label: 'Materiál',
-      kind: 'select',
-      options: ['Hliník', 'Ocel', 'Dřevo', 'Sklolaminát'],
-      order: 4,
-    },
-    { key: 'year', label: 'Rok výroby', kind: 'integer', order: 5 },
-  ]),
+  Regál: equipmentTypePreset('pallet_rack')!.fieldDefinitions,
+  Žebřík: equipmentTypePreset('portable_ladder')!.fieldDefinitions,
 };
 
 export interface CatalogItem {
@@ -86,16 +51,22 @@ export const MOCK_ITEMS: CatalogItem[] = Array.from({ length: ITEM_COUNT }, (_, 
       type === 'Regál'
         ? {
             manufacturer: pick(['Mecalux', 'Stow', 'Jungheinrich', 'Kasten'], i),
-            rack_type: pick(['Paletový', 'Policový', 'Konzolový'], i),
+            configuration: pick(['Jednostranný', 'Oboustranný', 'Double deep'], i),
             height_mm: pick([4500, 6000, 7500, 9000], i),
-            bay_load_kg: pick([2000, 3000, 4500], i),
+            bay_width_mm: pick([1825, 2225, 2700], i),
             levels: pick([3, 4, 5, 6], i),
+            bay_load_kg: pick([6000, 9000, 12000], i),
             load_sign: i % 5 !== 0,
+            anchored: true,
             year: 2012 + (i % 12),
           }
         : {
             manufacturer: pick(['Krause', 'Alve', 'Hailo'], i),
-            ladder_type: pick(['Dvojitý', 'Opěrný', 'Schůdky', 'Pojízdný'], i),
+            ladder_type: pick(
+              ['Dvojitý (štaflový)', 'Opěrný', 'Schůdky', 'Pojízdný s plošinou'],
+              i,
+            ),
+            standard: pick(['EN 131 Professional', 'EN 131 (před r. 2018)'], i),
             rungs: pick([6, 8, 10, 12], i),
             max_load_kg: 150,
             material: pick(['Hliník', 'Ocel', 'Sklolaminát'], i),
@@ -107,6 +78,25 @@ export const MOCK_ITEMS: CatalogItem[] = Array.from({ length: ITEM_COUNT }, (_, 
   };
 });
 
+/** A 4-digit series in the same site (hall C) – both series live side by side. */
+export const MOCK_ITEMS_4_DIGIT: CatalogItem[] = Array.from({ length: 5 }, (_, i) => ({
+  itemNumber: String(4001 + i),
+  qrCode: null,
+  type: 'Žebřík',
+  hall: 'C',
+  row: 5,
+  position: 1 + i,
+  fieldValues: {
+    manufacturer: 'Alve',
+    ladder_type: 'Dvojitý (štaflový)',
+    standard: 'EN 131 Professional',
+    rungs: 4 + i,
+    max_load_kg: 150,
+  },
+  lastInspection: { date: '2025-11-14', result: 'V pořádku' },
+  nextInspection: '2026-11-14',
+}));
+
 export function locationLabel(item: CatalogItem): string {
   return `Hala ${item.hall} › Řada ${item.row} › Pozice ${item.position}`;
 }
@@ -117,6 +107,7 @@ export function compareByLocation(a: CatalogItem, b: CatalogItem): number {
     a.hall.localeCompare(b.hall) ||
     a.row - b.row ||
     a.position - b.position ||
+    a.itemNumber.length - b.itemNumber.length ||
     a.itemNumber.localeCompare(b.itemNumber)
   );
 }

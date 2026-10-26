@@ -11,7 +11,7 @@ test('camera scan shows the item detail; OK saves and returns to the scanner', a
   await expect(card(page)).toContainText('Příští kontrola');
   await card(page).getByRole('button', { name: 'V pořádku' }).tap();
   await expect(card(page)).toBeHidden();
-  await expect(page.locator('.scan-progress')).toHaveText(/Zkontrolováno 1 z 50/);
+  await expect(page.locator('.scan-progress')).toHaveText(/Zkontrolováno 1 z 55/);
 
   // The same label is still in view: the de-duplication must not reopen the card.
   await page.waitForTimeout(2000);
@@ -30,7 +30,7 @@ test('Zrušit closes the card without saving anything', async ({ page }) => {
   await expect(card(page)).toBeHidden();
 
   await page.goto('/#/inspection');
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 50');
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 55');
 });
 
 test('leaving the scanner closes an open card without recording it', async ({ page }) => {
@@ -67,6 +67,44 @@ test('keypad defect with description is stored; re-opening shows the previous re
   await type('10002');
   await expect(card(page)).toContainText('už zkontrolováno');
   await expect(card(page)).toContainText('Závada – vyřazeno – Ohnutý příčník');
+});
+
+test('4- and 5-digit series: leading 0 on the keypad, OK for short numbers, scanner too', async ({
+  page,
+}) => {
+  await page.goto('/#/keypad');
+  const press = async (keys: string) => {
+    for (const key of keys) {
+      await page
+        .getByRole('button', { name: key, exact: true })
+        .first()
+        .dispatchEvent('pointerdown');
+    }
+  };
+  // 04001 = item 4001: opens right after the 5th digit.
+  await press('04001');
+  await expect(card(page).locator('.card-number')).toHaveText('4001');
+  await card(page).getByRole('button', { name: 'Zrušit' }).tap();
+
+  // Without the leading zero it waits for OK.
+  await press('4002');
+  await expect(card(page)).toBeHidden();
+  await page.getByRole('button', { name: 'OK', exact: true }).dispatchEvent('pointerdown');
+  await expect(card(page).locator('.card-number')).toHaveText('4002');
+  await card(page).getByRole('button', { name: 'Zrušit' }).tap();
+
+  // An unknown 5-digit number does not open by itself.
+  await press('99999');
+  await expect(card(page)).toBeHidden();
+  await page.getByRole('button', { name: 'OK', exact: true }).dispatchEvent('pointerdown');
+  await expect(card(page)).toContainText('Neznámý kód');
+  await card(page).getByRole('button', { name: 'Pokračovat' }).tap();
+
+  await page.goto('/#/');
+  await expect(page.locator('.tile').first()).toBeVisible();
+  await page.keyboard.type('4003', { delay: 5 });
+  await page.keyboard.press('Enter');
+  await expect(card(page).locator('.card-number')).toHaveText('4003');
 });
 
 test('Bluetooth keyboard-wedge scan works on any screen', async ({ page }) => {

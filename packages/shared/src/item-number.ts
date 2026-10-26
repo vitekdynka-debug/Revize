@@ -1,19 +1,30 @@
-/** Item numbers are exactly five digits, unique within a customer. */
-export const ITEM_NUMBER_LENGTH = 5;
+/**
+ * Item numbers are numeric series of different lengths – a site may have 4- and 5-digit
+ * series side by side. Leading zeros carry no meaning: "01234" is the same item as "1234"
+ * (on the keypad a 4-digit number is typed with a leading 0 so that lookup can fire after
+ * the 5th digit). Numbers are stored in canonical form, without leading zeros (ADR-0012).
+ */
+export const ITEM_NUMBER_MAX_LENGTH = 8;
 
-const ITEM_NUMBER_PATTERN = /^\d{5}$/;
+/** The keypad looks up automatically after this many digits; shorter numbers are confirmed. */
+export const KEYPAD_AUTO_LENGTH = 5;
 
-export function isValidItemNumber(value: string): boolean {
-  return ITEM_NUMBER_PATTERN.test(value);
+const DIGITS = /^\d{1,8}$/;
+
+/** Canonical form ("01234" → "1234"), or null when the input is not an item number. */
+export function canonicalItemNumber(input: string): string | null {
+  const trimmed = input.trim();
+  if (!DIGITS.test(trimmed)) return null;
+  const canonical = trimmed.replace(/^0+/, '');
+  return canonical === '' ? null : canonical;
 }
 
-/**
- * Normalizes user or scanner input to an item number candidate:
- * trims whitespace and left-pads shorter numeric input ("42" -> "00042").
- * Returns null when the input cannot be an item number.
- */
-export function normalizeItemNumber(input: string): string | null {
-  const trimmed = input.trim();
-  if (!/^\d{1,5}$/.test(trimmed)) return null;
-  return trimmed.padStart(ITEM_NUMBER_LENGTH, '0');
+/** A stored item number: digits without leading zeros, at most 8 digits, not zero. */
+export function isValidItemNumber(value: string): boolean {
+  return /^[1-9]\d{0,7}$/.test(value);
+}
+
+/** Numeric order of item numbers (so that "999" sorts before "1000"). */
+export function compareItemNumbers(a: string, b: string): number {
+  return a.length - b.length || a.localeCompare(b);
 }

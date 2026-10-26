@@ -1,12 +1,18 @@
-import { isValidItemNumber, parseScanPayload } from '@revize/shared';
+import { canonicalItemNumber, compareItemNumbers, parseScanPayload } from '@revize/shared';
 import { db, type LocalItemRow } from './db.js';
-import { MOCK_ITEMS, compareByLocation, type CatalogItem } from './mock-items.js';
+import {
+  MOCK_ITEMS,
+  MOCK_ITEMS_4_DIGIT,
+  compareByLocation,
+  type CatalogItem,
+} from './mock-items.js';
 
 /**
  * Items of the current customer: the demo catalog plus items created in the field.
  * Kept in memory for instant lookups (scanner, keypad); `refreshCatalog()` reloads the local part.
  */
-let items: CatalogItem[] = [...MOCK_ITEMS];
+const DEMO_ITEMS = [...MOCK_ITEMS, ...MOCK_ITEMS_4_DIGIT];
+let items: CatalogItem[] = [...DEMO_ITEMS].sort(compareByLocation);
 let byNumber = new Map<string, CatalogItem>();
 let byQr = new Map<string, CatalogItem>();
 
@@ -18,7 +24,7 @@ index();
 
 export async function refreshCatalog(): Promise<void> {
   const local = await db.items.toArray();
-  items = [...MOCK_ITEMS, ...local].sort(compareByLocation);
+  items = [...DEMO_ITEMS, ...local].sort(compareByLocation);
   index();
 }
 
@@ -36,33 +42,36 @@ export function itemByNumber(itemNumber: string): CatalogItem | null {
 export function findItem(raw: string): CatalogItem | null {
   const target = parseScanPayload(raw);
   if (!target) return null;
-  return target.kind === 'itemNumber'
-    ? (byNumber.get(target.itemNumber) ?? null)
-    : (byQr.get(target.code) ?? null);
+  // A numeric payload may be a QR code value as well as an item number: QR code wins.
+  const byCode = byQr.get(target.code) ?? null;
+  if (target.kind === 'qr') return byCode;
+  return byCode ?? byNumber.get(target.itemNumber) ?? null;
 }
 
 /** QR label content as stored on the item: the code from a label URL, or the raw text. */
 export function qrCodeFromScan(raw: string): string | null {
   const target = parseScanPayload(raw);
   if (!target) return null;
-  return target.kind === 'qr' ? target.code : target.itemNumber;
+  return target.code;
 }
 
-/** Next free item number above the highest one in use (the server will assign it later). */
+/** Next free number above the highest one of the longest series in use (server assigns later). */
 export function nextFreeItemNumber(): string {
-  const highest = Math.max(0, ...items.map((item) => Number(item.itemNumber)));
-  for (let n = highest + 1; n <= 99999; n++) {
-    const candidate = String(n).padStart(5, '0');
-    if (!byNumber.has(candidate)) return candidate;
+  const numbers = items.map((item) => item.itemNumber).sort(compareItemNumbers);
+  for (let n = Number(numbers.at(-1) ?? '0') + 1; n <= 99_999_999; n++) {
+    if (!byNumber.has(String(n))) return String(n);
   }
   throw new Error('Došla volná čísla artiklů');
 }
 
-export type ItemNumberProblem = 'invalid' | 'taken' | null;
+export type ItemNumberCheck =
+  { ok: true; itemNumber: string } | { ok: false; problem: 'invalid' | 'taken' };
 
-export function checkItemNumber(itemNumber: string): ItemNumberProblem {
-  if (!isValidItemNumber(itemNumber)) return 'invalid';
-  return byNumber.has(itemNumber) ? 'taken' : null;
+/** Validates a typed number and returns its canonical form ("01234" → "1234"). */
+export function checkItemNumber(input: string): ItemNumberCheck {
+  const itemNumber = canonicalItemNumber(input);
+  if (!itemNumber) return { ok: false, problem: 'invalid' };
+  return byNumber.has(itemNumber) ? { ok: false, problem: 'taken' } : { ok: true, itemNumber };
 }
 
 export function isQrCodeTaken(qrCode: string): boolean {

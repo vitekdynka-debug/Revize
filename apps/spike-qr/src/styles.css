@@ -733,3 +733,6 @@ details.panel[open] > summary {
   padding: 2px 8px;
   font-size: 0.8rem;
 }
+.key-ok {
+  grid-column: 1 / -1;
+}

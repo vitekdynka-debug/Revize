@@ -36,7 +36,7 @@ test('creates a new item with validated fields, photo and immediate check', asyn
   await expect(card(page).locator('.thumb')).toHaveCount(1);
   await card(page).getByRole('button', { name: 'V pořádku' }).tap();
   await expect(page).toHaveURL(/#\/inspection$/);
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 1 z 51');
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 1 z 56');
 
   // It survives a restart and is found by its number.
   await page.reload();
@@ -56,7 +56,7 @@ test('an unknown scanned code can become a new item with that QR code', async ({
 
   await expect(page.getByLabel('QR kód')).toHaveValue('NOVY-7');
   await page.locator('.field', { hasText: 'Výrobce' }).locator('input').fill('Stow');
-  await page.getByRole('button', { name: 'Paletový' }).tap();
+  await page.getByRole('button', { name: 'Oboustranný' }).tap();
   await page.getByRole('button', { name: 'Uložit a založit další' }).tap();
   // Next item: same location, next position, next free number.
   await expect(page.getByLabel('Pozice')).toHaveValue('2');

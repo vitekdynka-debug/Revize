@@ -181,8 +181,11 @@ export const item = pgTable(
     equipmentTypeId: uuid('equipment_type_id')
       .notNull()
       .references(() => equipmentType.id),
-    /** Five digits, unique within the customer. */
-    itemNumber: varchar('item_number', { length: 5 }).notNull(),
+    /**
+     * Numeric series of any length up to 8 digits, stored without leading zeros (ADR-0012),
+     * unique within the customer.
+     */
+    itemNumber: varchar('item_number', { length: 8 }).notNull(),
     /** Content of the QR label; independent of the item number (phase 2 labels). */
     qrCode: text('qr_code'),
     fieldValues: jsonb('field_values').$type<Record<string, unknown>>().notNull().default({}),
@@ -200,7 +203,7 @@ export const item = pgTable(
     index('item_location_idx').on(t.locationId),
     index('item_next_inspection_idx').on(t.organizationId, t.nextInspectionDate),
     index('item_field_values_idx').using('gin', t.fieldValues),
-    check('item_number_check', sql`${t.itemNumber} ~ '^[0-9]{5}$'`),
+    check('item_number_check', sql`${t.itemNumber} ~ '^[1-9][0-9]{0,7}$'`),
     check('item_status_check', sql`${t.status} in ('in_service', 'out_of_service')`),
   ],
 );

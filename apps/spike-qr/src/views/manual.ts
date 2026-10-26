@@ -1,10 +1,12 @@
-import { ITEM_NUMBER_LENGTH } from '@revize/shared';
+import { ITEM_NUMBER_MAX_LENGTH, KEYPAD_AUTO_LENGTH } from '@revize/shared';
+import { findItem } from '../catalog.js';
 import { runCheck } from '../check-flow.js';
 import { h } from '../dom.js';
 
 /**
  * Manual item-number entry. `keypad` uses an on-screen numeric keypad (no iOS keyboard),
- * otherwise the system numeric keyboard. Lookup fires as soon as 5 digits are entered.
+ * otherwise the system numeric keyboard. A 5-digit number of an existing item opens it right
+ * away (4-digit series are typed with a leading 0); any other length is confirmed with OK.
  */
 export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () => void {
   let readyAt = performance.now();
@@ -13,7 +15,8 @@ export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () 
     type: 'text',
     inputmode: variant === 'keypad' ? 'none' : 'numeric',
     pattern: '[0-9]*',
-    maxlength: ITEM_NUMBER_LENGTH,
+    maxlength: ITEM_NUMBER_MAX_LENGTH,
+    enterkeyhint: 'search',
     autocomplete: 'off',
     autocorrect: 'off',
     spellcheck: 'false',
@@ -24,16 +27,21 @@ export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () 
 
   const submit = async () => {
     const value = input.value;
-    if (value.length !== ITEM_NUMBER_LENGTH) return;
+    if (value === '') return;
     await runCheck({ mode: variant, raw: value, toReadMs: performance.now() - readyAt });
     input.value = '';
     readyAt = performance.now();
     if (variant === 'manual') input.focus();
   };
 
+  /** Auto lookup after the 5th digit, but only for a number that exists. */
+  const maybeAutoSubmit = () => {
+    if (input.value.length === KEYPAD_AUTO_LENGTH && findItem(input.value)) void submit();
+  };
+
   input.addEventListener('input', () => {
-    input.value = input.value.replace(/\D/g, '').slice(0, ITEM_NUMBER_LENGTH);
-    void submit();
+    input.value = input.value.replace(/\D/g, '').slice(0, ITEM_NUMBER_MAX_LENGTH);
+    maybeAutoSubmit();
   });
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') void submit();
@@ -41,8 +49,9 @@ export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () 
 
   const press = (key: string) => {
     if (key === '⌫') input.value = input.value.slice(0, -1);
-    else if (input.value.length < ITEM_NUMBER_LENGTH) input.value += key;
-    void submit();
+    else if (key === 'C') input.value = '';
+    else if (input.value.length < ITEM_NUMBER_MAX_LENGTH) input.value += key;
+    maybeAutoSubmit();
   };
   const keypad =
     variant === 'keypad'
@@ -56,12 +65,22 @@ export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () 
                 class: 'btn key',
                 onpointerdown: (event: Event) => {
                   event.preventDefault();
-                  if (key === 'C') input.value = '';
-                  else press(key);
+                  press(key);
                 },
               },
               key,
             ),
+          ),
+          h(
+            'button',
+            {
+              class: 'btn btn-ok key key-ok',
+              onpointerdown: (event: Event) => {
+                event.preventDefault();
+                void submit();
+              },
+            },
+            'OK',
           ),
         )
       : null;
@@ -75,10 +94,14 @@ export function manualView(root: HTMLElement, variant: 'manual' | 'keypad'): () 
       h(
         'p',
         { class: 'muted' },
-        'Zadejte 5místné číslo artiklu (10001–10050). Hledá se hned po 5. číslici.',
+        'Pětimístné číslo se otevře hned. Čtyřmístné zadejte s nulou na začátku (např. 04001), ' +
+          'nebo napište číslo a potvrďte OK.',
       ),
       input,
       keypad,
+      variant === 'manual'
+        ? h('button', { class: 'btn btn-ok', onclick: () => void submit() }, 'Vyhledat')
+        : '',
     ),
   );
   if (variant === 'manual') input.focus();

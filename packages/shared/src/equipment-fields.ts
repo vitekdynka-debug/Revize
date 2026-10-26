@@ -39,6 +39,10 @@ export const fieldDefinitionSchema = z
     required: z.boolean().default(false),
     /** Allowed values for select/multiselect. */
     options: z.array(z.string().trim().min(1).max(100)).max(200).default([]),
+    /** Offered values for text fields (e.g. common manufacturers); any other text is allowed. */
+    suggestions: z.array(z.string().trim().min(1).max(100)).max(200).default([]),
+    /** Help text shown under the field. */
+    help: z.string().trim().max(300).optional(),
     unit: z.string().trim().max(20).optional(),
     order: z.number().int().min(0),
     /** Archived fields are hidden in forms but their stored values are kept. */

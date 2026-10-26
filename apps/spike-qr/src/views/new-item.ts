@@ -227,7 +227,7 @@ export function newItemView(root: HTMLElement, params: URLSearchParams): () => v
       type: 'text',
       inputmode: 'numeric',
       pattern: '[0-9]*',
-      maxlength: 5,
+      maxlength: 8,
       class: 'text-input mono big',
       value: state.itemNumber,
       'aria-label': 'Číslo artiklu',
@@ -257,15 +257,15 @@ export function newItemView(root: HTMLElement, params: URLSearchParams): () => v
       formError.textContent = '';
       let valid = true;
 
-      const itemNumber = numberInput.value.trim();
-      const numberProblem = checkItemNumber(itemNumber);
-      if (numberProblem) {
+      const numberCheck = checkItemNumber(numberInput.value);
+      const itemNumber = numberCheck.ok ? numberCheck.itemNumber : '';
+      if (!numberCheck.ok) {
         valid = false;
         showError(
           'itemNumber',
-          numberProblem === 'taken'
+          numberCheck.problem === 'taken'
             ? 'Toto číslo už má jiný artikl.'
-            : 'Číslo artiklu musí mít 5 číslic.',
+            : 'Číslo artiklu: 1–8 číslic (úvodní nuly se nepočítají).',
         );
       }
       const qrCode = qrInput.value.trim() ? qrCodeFromScan(qrInput.value) : null;

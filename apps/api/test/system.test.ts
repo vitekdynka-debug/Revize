@@ -44,18 +44,32 @@ describe('bootstrap and demo data', () => {
     await ctx.reset({ seedDemo: true });
     const db = ctx.database.db;
     const types = await db.select().from(equipmentType).orderBy(asc(equipmentType.name));
-    expect(types.map((t) => t.name)).toEqual(['Regál', 'Žebřík']);
-    expect(types[1]!.fieldDefinitions.map((f) => f.key)).toContain('ladder_type');
-    expect(types[0]!.protocolTemplate).toContain('ČSN EN 15635');
+    expect(types.map((t) => t.name).sort()).toEqual(
+      [
+        'Pevný žebřík',
+        'Regál konzolový',
+        'Regál paletový',
+        'Regál policový',
+        'Regál vjezdový',
+        'Žebřík',
+      ].sort(),
+    );
+    const byName = new Map(types.map((t) => [t.name, t]));
+    expect(byName.get('Žebřík')!.fieldDefinitions.map((f) => f.key)).toContain('ladder_type');
+    expect(byName.get('Regál paletový')!.protocolTemplate).toContain('ČSN EN 15635');
 
     const items = await db
       .select({ number: item.itemNumber, qr: item.qrCode, sortPath: location.sortPath })
       .from(item)
       .innerJoin(location, eq(location.id, item.locationId))
       .orderBy(asc(location.sortPath));
-    expect(items).toHaveLength(30);
+    expect(items).toHaveLength(35);
     expect(items[0]).toMatchObject({ number: '10001', qr: 'R10001' });
-    expect(items.map((i) => i.number)).toEqual([...items.map((i) => i.number)].sort());
+    // Location order: the 5-digit series in halls A–B, then the 4-digit series in hall C.
+    expect(items.slice(0, 30).map((i) => i.number)).toEqual(
+      [...items.slice(0, 30).map((i) => i.number)].sort(),
+    );
+    expect(items.slice(30).map((i) => i.number)).toEqual(['4001', '4002', '4003', '4004', '4005']);
 
     await expect(ctx.login(DEMO_INSPECTOR.email, DEMO_INSPECTOR.password)).resolves.toBeTruthy();
   });

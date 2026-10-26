@@ -15,7 +15,7 @@ test('results and photos survive closing the app; finished inspection exports XL
   page,
 }) => {
   await page.goto('/#/inspection');
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 50');
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 55');
 
   // Check two items from the list (sorted by location).
   await page.locator('.item-row', { hasText: '10001' }).tap();
@@ -32,26 +32,26 @@ test('results and photos survive closing the app; finished inspection exports XL
   }
   await card(page).getByRole('button', { name: 'Uložit závadu' }).tap();
   await expect(card(page)).toBeHidden();
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 2 z 50');
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 2 z 55');
 
   // "Closing the app": a fresh page load must still have results and photos (IndexedDB).
   await page.reload();
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 2 z 50');
-  await expect(page.locator('.item-row')).toHaveCount(48);
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 2 z 55');
+  await expect(page.locator('.item-row')).toHaveCount(53);
   await page.getByRole('button', { name: 'Zkontrolované', exact: true }).tap();
   await page.locator('.item-row', { hasText: '10005' }).tap();
   await expect(card(page)).toContainText('(2 foto)');
   await card(page).getByRole('button', { name: 'Zrušit' }).tap();
 
   page.once('dialog', (dialog) => {
-    expect(dialog.message()).toContain('48 artiklů není zkontrolováno');
+    expect(dialog.message()).toContain('53 artiklů není zkontrolováno');
     void dialog.accept();
   });
   await page.getByRole('button', { name: 'Ukončit kontrolu', exact: true }).tap();
   await expect(page).toHaveURL(/#\/exports$/);
   const panel = page.locator('.panel').first();
   await expect(panel).toContainText('ukončená');
-  await expect(panel).toContainText('OK 1 · závady 1 (vyřazeno 0) · nezkontrolováno 48 · fotek 2');
+  await expect(panel).toContainText('OK 1 · závady 1 (vyřazeno 0) · nezkontrolováno 53 · fotek 2');
 
   await panel.getByRole('button', { name: 'Připravit export' }).tap();
   await expect(panel.locator('.file-row')).toHaveCount(3);
@@ -70,7 +70,7 @@ test('results and photos survive closing the app; finished inspection exports XL
   expect(csv).toContain(
     '10005,Regál,Hala A › Řada 1 › Pozice 5,Závada,"Chybí pojistka; ""nosník""",ne',
   );
-  expect(csv.split('\r\n')).toHaveLength(51);
+  expect(csv.split('\r\n')).toHaveLength(56);
 
   // ZIP: photos named by item number plus a sidecar CSV.
   const zip = unzipSync(new Uint8Array(await downloadFile(page, /fotky\.zip/)));
@@ -81,5 +81,5 @@ test('results and photos survive closing the app; finished inspection exports XL
   // A new inspection starts empty.
   await page.goto('/#/');
   await page.getByRole('button', { name: 'Zahájit kontrolu' }).tap();
-  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 50');
+  await expect(page.locator('.progress')).toContainText('Zkontrolováno 0 z 55');
 });

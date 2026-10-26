@@ -2,8 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { parseScanPayload } from './scan-payload.js';
 
 describe('parseScanPayload', () => {
-  it('treats a 5-digit payload as an item number', () => {
-    expect(parseScanPayload('01234\n')).toEqual({ kind: 'itemNumber', itemNumber: '01234' });
+  it('treats a numeric payload as an item number candidate (any series length)', () => {
+    expect(parseScanPayload('01234\n')).toEqual({
+      kind: 'digits',
+      code: '01234',
+      itemNumber: '1234',
+    });
+    expect(parseScanPayload('12345')).toEqual({
+      kind: 'digits',
+      code: '12345',
+      itemNumber: '12345',
+    });
   });
 
   it('extracts the code from a label URL', () => {
@@ -19,6 +28,7 @@ describe('parseScanPayload', () => {
 
   it('keeps any other payload as an opaque QR code', () => {
     expect(parseScanPayload('REG-0001')).toEqual({ kind: 'qr', code: 'REG-0001' });
+    expect(parseScanPayload('123456789')).toEqual({ kind: 'qr', code: '123456789' });
     expect(parseScanPayload('https://example.com/other')).toEqual({
       kind: 'qr',
       code: 'https://example.com/other',

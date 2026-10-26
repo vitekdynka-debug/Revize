@@ -119,7 +119,7 @@ Klíčové tabulky a sloupce (všechna PK `uuid`, generovaná i na klientovi; v�
   date, boolean, select, multiselect], required, options, order, unit, `archived`), `default_interval_months`,
   `protocol_template` (text s jednoduchými placeholdery), `schema_version`. Klíče polí jsou neměnné,
   odebrané pole se archivuje (data artiklů zůstávají).
-- `item` (customer_id, site_id, location_id, equipment_type_id, `item_number` char(5) – unique
+- `item` (customer_id, site_id, location_id, equipment_type_id, `item_number` varchar(8), číselná řada bez úvodních nul (ADR-0012) – unique
   (customer_id, item_number), `qr_code` text unique per organizace nullable, `field_values jsonb`
   validované v API podle typu, `status` [in_service, out_of_service], `next_inspection_date`,
   `retired_at`, `created_by`).
