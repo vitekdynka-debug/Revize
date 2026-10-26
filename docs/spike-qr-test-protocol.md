@@ -58,6 +58,19 @@ nebo novější.
 | F4  | Tabulka           | Otevřete .xlsx v Numbers nebo Excelu.                                                           | Sloupce, zamčené záhlaví, filtr, list Souhrn.                                            |
 | F5  | Fotky v ZIP       | Rozbalte ZIP v Souborech.                                                                       | `10005_01.jpg`… a `fotky.csv`                                                            |
 
+## Kolo 4 (fotky, nové artikly)
+Před testem: na úvodní obrazovce **„Aktualizovat aplikaci“**.
+
+| # | Test | Co sledovat |
+|---|---|---|
+| N1 | Závada se 2–3 fotkami → Uložit. Artikl otevřete znovu → Závada → ťukněte na náhled. | Fotka na celou obrazovku, listování ‹ ›, Smazat. Fotky zůstanou i po dalším „Uložit závadu“. |
+| N2 | U artiklu v pořádku *Vyfotit artikl (štítek…)* → V pořádku. | Fotka je u artiklu vidět i příště. |
+| N3 | *Seznam artiklů → Fotky ke kontrole* → vyfotit halu. | Fotka v sekci a v ZIPu jako `kontrola_01.jpg` |
+| N4 | *＋ Nový artikl*: typ, číslo (nabídne další volné), umístění, pole, fotka štítku → *Uložit a zkontrolovat*. | Ihned se otevře karta nového artiklu. V seznamu je označený „nový“. |
+| N5 | *Uložit a založit další* | Stejná hala a řada, další pozice a další volné číslo |
+| N6 | Načtěte QR kód, který v evidenci není → *Založit nový artikl*. | QR kód je předvyplněný. Po uložení ho skener najde. |
+| N7 | Export → `.csv` a `fotky.csv` otevřete v Excelu. | Sloupce rozložené (oddělovač je teď čárka) |
+
 ## Výstup
 
 _Měření → Sdílet CSV_ (nebo _Stáhnout CSV_) a soubor mi pošlete spolu s poznámkami:

@@ -2,7 +2,7 @@ import { createWebFeedback } from '@revize/scanner';
 import { photoCount, resultFor, saveResult, startInspection } from './inspection.js';
 import { showItemCard } from './item-card.js';
 import { addLog, type InputMode } from './log.js';
-import { findItem } from './mock-items.js';
+import { catalogReady, findItem } from './catalog.js';
 import { loadSettings, type SpikeSettings } from './settings.js';
 
 const initial = loadSettings();
@@ -40,6 +40,7 @@ export async function runCheck(input: CheckInput): Promise<void> {
   if (cardOpen) return;
   cardOpen = true;
   try {
+    await catalogReady;
     const item = findItem(input.raw);
     if (item) feedback.success();
     else feedback.failure();
@@ -49,10 +50,14 @@ export async function runCheck(input: CheckInput): Promise<void> {
     const decision = await showItemCard({
       item,
       raw: input.raw,
+      inspectionId: inspection.id,
       existing,
       existingPhotos: existing ? await photoCount(existing.id) : 0,
       onSave: (result) =>
         saveResult(inspection.id, item!.itemNumber, { ...result, mode: input.mode }),
+      onCreateItem: (raw) => {
+        location.hash = `#/new-item?code=${encodeURIComponent(raw)}`;
+      },
     });
     if (!decision) return;
     addLog({

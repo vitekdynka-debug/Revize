@@ -1,13 +1,8 @@
 import { strToU8, zipSync } from 'fflate';
-import { db, photoBytes, type InspectionRow, type ResultRow } from './db.js';
+import { allItems, itemByNumber } from './catalog.js';
+import { db, photoBytes, type InspectionRow, type PhotoRow, type ResultRow } from './db.js';
 import type { InputMode } from './log.js';
-import {
-  MOCK_CUSTOMER,
-  MOCK_ITEMS,
-  compareByLocation,
-  itemByNumber,
-  locationLabel,
-} from './mock-items.js';
+import { MOCK_CUSTOMER, locationLabel } from './mock-items.js';
 import { buildXlsx, type CellValue } from './xlsx.js';
 
 export async function activeInspection(): Promise<InspectionRow | null> {
@@ -35,57 +30,28 @@ export interface ResultInput {
   outcome: 'ok' | 'defect';
   defectDescription: string;
   outOfService: boolean;
-  photos: Blob[];
   mode: InputMode;
 }
 
 /**
- * Stores (or replaces) the result for an item. Resolves only after IndexedDB committed the
- * transaction – the UI confirms the check only then.
+ * Stores (or replaces) the result for an item. Photos are not part of it: they are stored the
+ * moment they are taken (photos.ts) and stay attached to the result id.
  */
 export async function saveResult(
   inspectionId: string,
   itemNumber: string,
   input: ResultInput,
 ): Promise<void> {
-  const id = `${inspectionId}:${itemNumber}`;
-  const now = new Date().toISOString();
-  // Read the bytes before the transaction: awaiting non-IndexedDB work inside it would commit it.
-  const photos = await Promise.all(
-    input.photos.map(async (blob) => ({
-      data: await blob.arrayBuffer(),
-      type: blob.type || 'image/jpeg',
-    })),
-  );
-  await db.transaction('rw', db.results, db.photos, async () => {
-    await db.results.put({
-      id,
-      inspectionId,
-      itemNumber,
-      outcome: input.outcome,
-      defectDescription: input.outcome === 'defect' ? input.defectDescription : '',
-      outOfService: input.outcome === 'defect' && input.outOfService,
-      recordedAt: now,
-      mode: input.mode,
-    });
-    // A changed result replaces the photos of the previous one.
-    await db.photos.where('resultId').equals(id).delete();
-    await db.photos.bulkAdd(
-      photos.map((photo) => ({
-        id: crypto.randomUUID(),
-        inspectionId,
-        resultId: id,
-        itemNumber,
-        takenAt: now,
-        ...photo,
-      })),
-    );
+  await db.results.put({
+    id: `${inspectionId}:${itemNumber}`,
+    inspectionId,
+    itemNumber,
+    outcome: input.outcome,
+    defectDescription: input.outcome === 'defect' ? input.defectDescription : '',
+    outOfService: input.outcome === 'defect' && input.outOfService,
+    recordedAt: new Date().toISOString(),
+    mode: input.mode,
   });
-  // Field data must not get lost silently: verify that every photo is really stored.
-  const stored = await db.photos.where('resultId').equals(id).count();
-  if (stored !== photos.length) {
-    throw new Error(`Uloženo ${stored} z ${photos.length} fotek`);
-  }
 }
 
 export async function resultsOf(inspectionId: string): Promise<Map<string, ResultRow>> {
@@ -109,19 +75,22 @@ export interface InspectionSummary {
   outOfService: number;
   unchecked: number;
   photos: number;
+  newItems: number;
 }
 
 export async function summarize(inspectionId: string): Promise<InspectionSummary> {
   const results = [...(await resultsOf(inspectionId)).values()];
   const defect = results.filter((r) => r.outcome === 'defect');
+  const items = allItems();
   return {
-    total: MOCK_ITEMS.length,
+    total: items.length,
     checked: results.length,
     ok: results.length - defect.length,
     defect: defect.length,
     outOfService: defect.filter((r) => r.outOfService).length,
-    unchecked: MOCK_ITEMS.length - results.length,
+    unchecked: items.length - results.length,
     photos: await db.photos.where('inspectionId').equals(inspectionId).count(),
+    newItems: items.filter((i) => i.local?.inspectionId === inspectionId).length,
   };
 }
 
@@ -137,9 +106,14 @@ export async function closedInspections(): Promise<InspectionRow[]> {
   return rows.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
+/** Deletes the inspection with its results and photos; item photos (nameplates…) stay. */
 export async function deleteInspection(inspectionId: string): Promise<void> {
   await db.transaction('rw', db.inspections, db.results, db.photos, async () => {
-    await db.photos.where('inspectionId').equals(inspectionId).delete();
+    await db.photos
+      .where('inspectionId')
+      .equals(inspectionId)
+      .filter((p) => p.owner !== 'item')
+      .delete();
     await db.results.where('inspectionId').equals(inspectionId).delete();
     await db.inspections.delete(inspectionId);
   });
@@ -149,13 +123,17 @@ export async function deleteInspection(inspectionId: string): Promise<void> {
 
 const OUTCOME_LABEL = { ok: 'V pořádku', defect: 'Závada' } as const;
 
-function csv(rows: (string | number)[][]): string {
-  const escape = (value: string | number) => {
-    const text = String(value);
-    return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+/**
+ * RFC 4180 CSV: comma separator, CRLF, UTF-8 with BOM (so that Excel reads diacritics).
+ * Excel splits comma files into columns in most setups (Mac, English Windows, Numbers,
+ * LibreOffice, Google Sheets); for Excel with Czech regional settings use the XLSX export.
+ */
+function csv(rows: CellValue[][]): string {
+  const escape = (value: CellValue) => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
-  // BOM + semicolons so that Czech Excel opens it correctly.
-  return '﻿' + rows.map((row) => row.map(escape).join(';')).join('\r\n');
+  return '\uFEFF' + rows.map((row) => row.map(escape).join(',')).join('\r\n');
 }
 
 const formatTime = (iso: string) => new Date(iso).toLocaleString('cs-CZ');
@@ -178,17 +156,20 @@ const RESULT_HEADER = [
   'Čas kontroly',
   'Způsob zadání',
   'Počet fotek',
+  'Nový artikl',
 ];
-const RESULT_WIDTHS = [13, 10, 32, 16, 45, 18, 20, 14, 12];
+const RESULT_WIDTHS = [13, 10, 32, 16, 45, 18, 20, 14, 12, 12];
 
 /** Results of all items (checked or not), sorted by location – one row per item. */
 async function resultRows(inspection: InspectionRow): Promise<CellValue[][]> {
   const results = await resultsOf(inspection.id);
   const photos = await db.photos.where('inspectionId').equals(inspection.id).toArray();
   const photoCounts = new Map<string, number>();
-  photos.forEach((p) => photoCounts.set(p.itemNumber, (photoCounts.get(p.itemNumber) ?? 0) + 1));
+  photos.forEach((p) => {
+    if (p.itemNumber) photoCounts.set(p.itemNumber, (photoCounts.get(p.itemNumber) ?? 0) + 1);
+  });
 
-  return [...MOCK_ITEMS].sort(compareByLocation).map((item) => {
+  return allItems().map((item) => {
     const r = results.get(item.itemNumber);
     return [
       Number(item.itemNumber),
@@ -200,15 +181,14 @@ async function resultRows(inspection: InspectionRow): Promise<CellValue[][]> {
       r ? formatTime(r.recordedAt) : '',
       r ? MODE_LABEL[r.mode] : '',
       photoCounts.get(item.itemNumber) ?? 0,
+      item.local?.inspectionId === inspection.id ? 'ano' : '',
     ];
   });
 }
 
 /** CSV is a plain table (no title rows), so spreadsheet apps detect the columns. */
 export async function resultsCsv(inspection: InspectionRow): Promise<string> {
-  return csv(
-    [RESULT_HEADER, ...(await resultRows(inspection))].map((row) => row.map((v) => v ?? '')),
-  );
+  return csv([RESULT_HEADER, ...(await resultRows(inspection))]);
 }
 
 export async function resultsXlsx(inspection: InspectionRow): Promise<Uint8Array> {
@@ -222,7 +202,7 @@ export async function resultsXlsx(inspection: InspectionRow): Promise<Uint8Array
     },
     {
       name: 'Souhrn',
-      widths: [22, 40],
+      widths: [26, 40],
       rows: [
         ['Zákazník', inspection.customer],
         ['Provozovna', inspection.site],
@@ -235,24 +215,44 @@ export async function resultsXlsx(inspection: InspectionRow): Promise<Uint8Array
         ['Závady', s.defect],
         ['z toho vyřazeno z provozu', s.outOfService],
         ['Nezkontrolováno', s.unchecked],
+        ['Nově založené artikly', s.newItems],
         ['Fotek', s.photos],
       ],
     },
   ]);
 }
 
-/** ZIP with defect photos named `<item>_<nn>.jpg` and a sidecar CSV describing them. */
+const PHOTO_KIND: Record<PhotoRow['owner'], string> = {
+  result: 'Výsledek kontroly',
+  item: 'Fotka artiklu',
+  inspection: 'Fotka ke kontrole',
+};
+
+/** File name: `10005_01.jpg` (result), `10005_artikl_01.jpg` (item), `kontrola_01.jpg`. */
+function photoFileName(photo: PhotoRow, index: number): string {
+  const nn = String(index).padStart(2, '0');
+  if (photo.owner === 'inspection') return `kontrola_${nn}.jpg`;
+  return photo.owner === 'item'
+    ? `${photo.itemNumber}_artikl_${nn}.jpg`
+    : `${photo.itemNumber}_${nn}.jpg`;
+}
+
+/** ZIP with all photos taken during the inspection and a sidecar CSV describing them. */
 export async function photosZip(inspection: InspectionRow): Promise<Blob> {
   const photos = await db.photos.where('inspectionId').equals(inspection.id).toArray();
   const results = await resultsOf(inspection.id);
   photos.sort(
-    (a, b) => a.itemNumber.localeCompare(b.itemNumber) || a.takenAt.localeCompare(b.takenAt),
+    (a, b) =>
+      (a.itemNumber ?? '').localeCompare(b.itemNumber ?? '') ||
+      a.owner.localeCompare(b.owner) ||
+      a.takenAt.localeCompare(b.takenAt),
   );
 
   const files: Record<string, Uint8Array> = {};
-  const sidecar: (string | number)[][] = [
+  const sidecar: CellValue[][] = [
     [
       'Soubor',
+      'Druh fotky',
       'Číslo artiklu',
       'Typ',
       'Umístění',
@@ -262,22 +262,24 @@ export async function photosZip(inspection: InspectionRow): Promise<Blob> {
       'Pořízeno',
     ],
   ];
-  const perItem = new Map<string, number>();
+  const counters = new Map<string, number>();
   for (const photo of photos) {
-    const index = (perItem.get(photo.itemNumber) ?? 0) + 1;
-    perItem.set(photo.itemNumber, index);
-    const name = `${photo.itemNumber}_${String(index).padStart(2, '0')}.jpg`;
+    const group = `${photo.owner}:${photo.itemNumber ?? ''}`;
+    const index = (counters.get(group) ?? 0) + 1;
+    counters.set(group, index);
+    const name = photoFileName(photo, index);
     files[name] = await photoBytes(photo);
-    const item = itemByNumber(photo.itemNumber);
-    const result = results.get(photo.itemNumber);
+    const item = photo.itemNumber ? itemByNumber(photo.itemNumber) : null;
+    const result = photo.itemNumber ? results.get(photo.itemNumber) : undefined;
     sidecar.push([
       name,
-      photo.itemNumber,
+      PHOTO_KIND[photo.owner],
+      photo.itemNumber ?? '',
       item?.type ?? '',
       item ? locationLabel(item) : '',
-      result ? OUTCOME_LABEL[result.outcome] : '',
+      result ? OUTCOME_LABEL[result.outcome] : photo.owner === 'result' ? 'neuloženo' : '',
       result?.defectDescription ?? '',
-      result?.outOfService ? 'ano' : 'ne',
+      result?.outOfService ? 'ano' : result ? 'ne' : '',
       formatTime(photo.takenAt),
     ]);
   }

@@ -14,6 +14,10 @@ použije beze změny v `apps/web`.
 - **Rychlá kontrola kamerou:** skener zůstává otevřený. Po načtení se ukáže karta s detailem
   artiklu (umístění, vlastní pole, poslední a příští kontrola) a s tlačítky **V pořádku /
   Závada / Zrušit**. U závady se zadává popis, příznak vyřazení a fotky (zmenšené na 2048 px).
+- **Fotky:** u závady, u artiklu (štítek, i u artiklu v pořádku) a ke kontrole jako celku.
+  Ukládají se hned po vyfocení, náhledy otevřou prohlížeč na celou obrazovku (listování, mazání).
+- **Nový artikl** v terénu: typ, číslo (nabídne další volné), QR kód, umístění, pole typu
+  (stejné definice a validace jako na serveru), fotky. Neznámý načtený kód nabídne jeho založení.
 - **Výběr správného štítku:** načte se kód nejblíž zaměřovacímu kříži. Přijme se až po několika
   shodných načteních a po zavření karty je krátká prodleva. Volitelně lze skenovat jen po
   stisku „Načíst“.

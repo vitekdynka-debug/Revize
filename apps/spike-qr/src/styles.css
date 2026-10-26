@@ -608,3 +608,128 @@ h2 {
 .file-name small {
   color: var(--muted);
 }
+
+/* Photo gallery and viewer */
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.thumb {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.thumb img {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+.viewer-image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+}
+.viewer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+}
+.viewer-counter {
+  min-width: 140px;
+  text-align: center;
+  color: #e2e8f0;
+}
+.section-title {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* New item form */
+.form-page .field {
+  font-weight: 600;
+}
+.text-input {
+  width: 100%;
+  max-width: 480px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #0b1222;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+.text-input.big {
+  max-width: 220px;
+  font-size: 2rem;
+  letter-spacing: 0.2em;
+}
+.with-unit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.with-unit .text-input {
+  max-width: 220px;
+}
+.choice {
+  margin: 0;
+}
+.location-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stepper-input {
+  width: 72px;
+  min-height: 44px;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #0b1222;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+.badge-new {
+  background: #7c3aed;
+}
+details.panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 32px;
+}
+details.panel[open] > summary {
+  margin-bottom: 12px;
+}
+.item-main .badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}

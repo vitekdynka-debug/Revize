@@ -16,3 +16,21 @@
   případně datum příští kontroly zadané v kontrole).
 - Číslo artiklu je unikátní v rámci zákazníka. Zadá ho technik, nebo ho přidělí systém
   (ADR-0004, rezervované bloky).
+
+## Fotky (upřesnění 2026-10-26, podle testu v terénu)
+Fotka má právě jednoho vlastníka (`photo_owner_check`, migrace `0001`):
+- **artikl:** výrobní štítek, celkový pohled. Zůstává u artiklu napříč kontrolami a jde pořídit
+  i u artiklu v pořádku.
+- **výsledek kontroly:** fotky závady. Patří k výsledku v dané kontrole.
+- **kontrola:** celkové fotky (hala, přístup, situace), nepatří k žádnému artiklu.
+
+V terénu se fotka uloží do IndexedDB hned po vyfocení, ještě před uložením výsledku. Do exportu
+ZIP jdou všechny fotky pořízené během kontroly: `10005_01.jpg` (výsledek),
+`10005_artikl_01.jpg` (artikl) a `kontrola_01.jpg`. Sidecar CSV obsahuje sloupec „Druh fotky“.
+
+## Formát CSV
+CSV podle **RFC 4180**: oddělovač čárka, CRLF, UTF-8 s BOM, čistá tabulka bez úvodních řádků.
+Excel na Macu, anglický Excel, Numbers, LibreOffice i Google Sheets ji rozloží do sloupců.
+Excel s českým místním nastavením ve Windows čeká středník. Pro lidi je proto hlavní export
+**XLSX** a CSV slouží hlavně pro strojové zpracování a import. Pokud se ukáže, že zákazníci
+používají český Excel ve Windows, přidá se volba oddělovače.

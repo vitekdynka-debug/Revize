@@ -9,7 +9,9 @@ import {
   summarize,
   type InspectionSummary,
 } from '../inspection.js';
-import { MOCK_ITEMS, compareByLocation, locationLabel, type MockItem } from '../mock-items.js';
+import { allItems } from '../catalog.js';
+import { locationLabel, type CatalogItem } from '../mock-items.js';
+import { createPhotoGallery, type PhotoGallery } from '../photo-gallery.js';
 
 type Filter = 'unchecked' | 'checked' | 'all';
 
@@ -20,7 +22,8 @@ const FILTERS: [Filter, string][] = [
 ];
 
 export function summaryLine(s: InspectionSummary): string {
-  return `OK ${s.ok} · závady ${s.defect} (vyřazeno ${s.outOfService}) · nezkontrolováno ${s.unchecked}`;
+  const created = s.newItems ? ` · nové artikly ${s.newItems}` : '';
+  return `OK ${s.ok} · závady ${s.defect} (vyřazeno ${s.outOfService}) · nezkontrolováno ${s.unchecked}${created}`;
 }
 
 export function progressBar(s: InspectionSummary): HTMLElement {
@@ -37,6 +40,7 @@ export function progressBar(s: InspectionSummary): HTMLElement {
 export function inspectionView(root: HTMLElement): () => void {
   let filter: Filter = 'unchecked';
   let disposed = false;
+  let gallery: PhotoGallery | null = null;
 
   const render = async () => {
     const inspection = (await activeInspection()) ?? (await startInspection());
@@ -46,7 +50,15 @@ export function inspectionView(root: HTMLElement): () => void {
     ]);
     if (disposed) return;
 
-    const items = [...MOCK_ITEMS].sort(compareByLocation).filter((item) => {
+    gallery?.dispose();
+    gallery = createPhotoGallery(
+      { owner: 'inspection', inspectionId: inspection.id },
+      {
+        addLabel: 'Vyfotit ke kontrole',
+        emptyText: 'Celkové fotky (hala, přístup, situace) – nepatří k žádnému artiklu.',
+      },
+    );
+    const items = allItems().filter((item) => {
       const checked = results.has(item.itemNumber);
       return filter === 'all' || (filter === 'checked' ? checked : !checked);
     });
@@ -61,6 +73,7 @@ export function inspectionView(root: HTMLElement): () => void {
           h('a', { href: '#/', class: 'btn btn-small' }, '← Zpět'),
           h('a', { href: '#/scan', class: 'btn btn-small btn-accent' }, 'Skener'),
           h('a', { href: '#/keypad', class: 'btn btn-small' }, 'Číselník'),
+          h('a', { href: '#/new-item', class: 'btn btn-small' }, '＋ Nový artikl'),
           h(
             'button',
             {
@@ -74,6 +87,7 @@ export function inspectionView(root: HTMLElement): () => void {
         h('p', { class: 'muted' }, inspection.site),
         progressBar(summary),
         h('p', {}, summaryLine(summary)),
+        h('details', { class: 'panel' }, h('summary', {}, 'Fotky ke kontrole'), gallery.element),
         h(
           'div',
           { class: 'segmented' },
@@ -107,7 +121,7 @@ export function inspectionView(root: HTMLElement): () => void {
     );
   };
 
-  const itemRow = (item: MockItem, result: ResultRow | undefined) =>
+  const itemRow = (item: CatalogItem, result: ResultRow | undefined) =>
     h(
       'li',
       {},
@@ -150,5 +164,6 @@ export function inspectionView(root: HTMLElement): () => void {
   void render();
   return () => {
     disposed = true;
+    gallery?.dispose();
   };
 }

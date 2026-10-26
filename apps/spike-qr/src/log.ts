@@ -98,13 +98,13 @@ const CSV_COLUMNS = [
 export function toCsv(list: readonly LogEntry[]): string {
   const escape = (value: unknown) => {
     const text = value === null || value === undefined ? '' : String(value);
-    return /[;"\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+    return /[,"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
   };
   const rows = list.map((entry) =>
     CSV_COLUMNS.map((column) => escape((entry as unknown as Record<string, unknown>)[column])).join(
-      ';',
+      ',',
     ),
   );
-  // BOM + semicolons so that Czech Excel opens it correctly.
-  return '﻿' + [CSV_COLUMNS.join(';'), ...rows].join('\r\n');
+  // RFC 4180 (comma) with a UTF-8 BOM, same as the inspection export.
+  return '\uFEFF' + [CSV_COLUMNS.join(','), ...rows].join('\r\n');
 }

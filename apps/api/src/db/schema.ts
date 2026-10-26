@@ -320,6 +320,10 @@ export const inspectionResult = pgTable(
   ],
 );
 
+/**
+ * A photo belongs to exactly one owner: the item (nameplate, overview – kept across inspections),
+ * an inspection result (defect photos) or the inspection as a whole (hall overview, access).
+ */
 export const photo = pgTable(
   'photo',
   {
@@ -327,6 +331,7 @@ export const photo = pgTable(
     organizationId: tenant(),
     itemId: uuid('item_id').references(() => item.id),
     inspectionResultId: uuid('inspection_result_id').references(() => inspectionResult.id),
+    inspectionId: uuid('inspection_id').references(() => inspection.id),
     storageKey: text('storage_key').notNull(),
     thumbnailKey: text('thumbnail_key'),
     mimeType: text('mime_type').notNull(),
@@ -342,7 +347,11 @@ export const photo = pgTable(
   (t) => [
     index('photo_item_idx').on(t.itemId),
     index('photo_result_idx').on(t.inspectionResultId),
-    check('photo_owner_check', sql`num_nonnulls(${t.itemId}, ${t.inspectionResultId}) = 1`),
+    index('photo_inspection_idx').on(t.inspectionId),
+    check(
+      'photo_owner_check',
+      sql`num_nonnulls(${t.itemId}, ${t.inspectionResultId}, ${t.inspectionId}) = 1`,
+    ),
   ],
 );
 

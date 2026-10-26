@@ -1,23 +1,29 @@
 export interface KeyboardWedgeOptions {
-  /** Maximum gap between two characters of one scan (ms). Humans type slower. */
-  maxIntervalMs?: number;
+  /** Average gap between characters of one scan must not exceed this (ms). Humans type slower. */
+  maxAverageIntervalMs?: number;
+  /** A longer pause ends the burst (human pause); shorter hiccups (Bluetooth buffering) are tolerated. */
+  maxGapMs?: number;
   /** Minimum number of characters for a valid scan. */
   minLength?: number;
 }
 
 /**
  * Recognizes input from Bluetooth/USB barcode scanners in keyboard ("HID wedge") mode:
- * a burst of characters with very short gaps, terminated by Enter.
- * Pure logic – feed it key events with timestamps.
+ * a fast burst of characters terminated by Enter. Bluetooth scanners occasionally pause for
+ * a moment in the middle of a code, so the decision uses the average speed of the burst,
+ * not every single gap. Pure logic – feed it key events with timestamps.
  */
 export class KeyboardWedgeDetector {
   private buffer = '';
+  private firstAt = 0;
   private lastAt = Number.NEGATIVE_INFINITY;
-  private readonly maxIntervalMs: number;
+  private readonly maxAverageIntervalMs: number;
+  private readonly maxGapMs: number;
   private readonly minLength: number;
 
   constructor(options: KeyboardWedgeOptions = {}) {
-    this.maxIntervalMs = options.maxIntervalMs ?? 50;
+    this.maxAverageIntervalMs = options.maxAverageIntervalMs ?? 35;
+    this.maxGapMs = options.maxGapMs ?? 300;
     this.minLength = options.minLength ?? 3;
   }
 
@@ -27,22 +33,27 @@ export class KeyboardWedgeDetector {
    */
   feed(key: string, now: number): string | null {
     const gap = now - this.lastAt;
-    this.lastAt = now;
-
     if (key === 'Enter') {
       const text = this.buffer;
-      this.buffer = '';
-      return gap <= this.maxIntervalMs && text.length >= this.minLength ? text : null;
+      const average = text.length > 1 ? (this.lastAt - this.firstAt) / (text.length - 1) : Infinity;
+      this.reset();
+      const fast = average <= this.maxAverageIntervalMs && gap <= this.maxGapMs;
+      return fast && text.length >= this.minLength ? text : null;
     }
     if (key.length !== 1) return null; // Shift, Alt, … sent by some scanners
 
-    if (gap > this.maxIntervalMs) this.buffer = '';
+    if (gap > this.maxGapMs) {
+      this.buffer = '';
+      this.firstAt = now;
+    }
     this.buffer += key;
+    this.lastAt = now;
     return null;
   }
 
   reset(): void {
     this.buffer = '';
+    this.firstAt = 0;
     this.lastAt = Number.NEGATIVE_INFINITY;
   }
 }

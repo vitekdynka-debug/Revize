@@ -30,7 +30,6 @@ test('results and photos survive closing the app; finished inspection exports XL
     await card(page).locator('input[type=file]').setInputFiles('e2e/.generated/defect.jpg');
     await expect(card(page).locator('.thumbs img')).toHaveCount(i);
   }
-  await expect(card(page).getByRole('button', { name: 'Vyfotit další (2)' })).toBeVisible();
   await card(page).getByRole('button', { name: 'Uložit závadu' }).tap();
   await expect(card(page)).toBeHidden();
   await expect(page.locator('.progress')).toContainText('Zkontrolováno 2 z 50');
@@ -67,9 +66,9 @@ test('results and photos survive closing the app; finished inspection exports XL
 
   // CSV: a plain table starting with the header row.
   const csv = (await downloadFile(page, /\.csv/)).toString('utf8');
-  expect(csv.startsWith('﻿Číslo artiklu;Typ;Umístění;Výsledek')).toBe(true);
+  expect(csv.startsWith('﻿Číslo artiklu,Typ,Umístění,Výsledek')).toBe(true);
   expect(csv).toContain(
-    '10005;Regál;Hala A › Řada 1 › Pozice 5;Závada;"Chybí pojistka; ""nosník""";ne',
+    '10005,Regál,Hala A › Řada 1 › Pozice 5,Závada,"Chybí pojistka; ""nosník""",ne',
   );
   expect(csv.split('\r\n')).toHaveLength(51);
 
@@ -77,7 +76,7 @@ test('results and photos survive closing the app; finished inspection exports XL
   const zip = unzipSync(new Uint8Array(await downloadFile(page, /fotky\.zip/)));
   expect(Object.keys(zip).sort()).toEqual(['10005_01.jpg', '10005_02.jpg', 'fotky.csv']);
   expect(zip['10005_01.jpg']!.subarray(0, 2)).toEqual(new Uint8Array([0xff, 0xd8])); // JPEG
-  expect(strFromU8(zip['fotky.csv']!)).toContain('10005_02.jpg;10005;Regál');
+  expect(strFromU8(zip['fotky.csv']!)).toContain('10005_02.jpg,Výsledek kontroly,10005,Regál');
 
   // A new inspection starts empty.
   await page.goto('/#/');

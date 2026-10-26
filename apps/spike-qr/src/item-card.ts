@@ -1,13 +1,13 @@
 import type { ResultRow } from './db.js';
 import { h } from './dom.js';
-import { locationLabel, type MockItem } from './mock-items.js';
-import { compressPhoto } from './photo.js';
+import { displayFields, locationLabel, type CatalogItem } from './mock-items.js';
+import { createPhotoGallery, type PhotoGallery } from './photo-gallery.js';
+import { deletePhoto } from './photos.js';
 
 export interface CardResult {
   outcome: 'ok' | 'defect';
   defectDescription: string;
   outOfService: boolean;
-  photos: Blob[];
 }
 
 export interface Decision {
@@ -18,13 +18,16 @@ export interface Decision {
 }
 
 export interface ItemCardOptions {
-  item: MockItem | null;
+  item: CatalogItem | null;
   raw: string;
+  inspectionId: string;
   /** Result already recorded for this item in the current inspection. */
   existing: ResultRow | null;
   existingPhotos: number;
   /** Persists the result; the card stays open (and shows an error) until this resolves. */
   onSave: (result: CardResult) => Promise<void>;
+  /** "Založit nový artikl" on an unknown code. */
+  onCreateItem?: (raw: string) => void;
 }
 
 let dismissActive: (() => void) | null = null;
@@ -40,33 +43,44 @@ const time = (iso: string) =>
 /**
  * Bottom sheet with the item detail and big V pořádku / Závada / Zrušit buttons.
  * Resolves with the decision once it is saved, or with null when cancelled or dismissed.
+ * Photos are stored the moment they are taken; cancelling removes defect photos taken in
+ * this card (item photos such as a nameplate are kept – they belong to the item).
  */
 export function showItemCard(options: ItemCardOptions): Promise<Decision | null> {
-  const { item, raw, existing } = options;
+  const { item, raw, existing, inspectionId } = options;
   const shownAt = performance.now();
+  const galleries: PhotoGallery[] = [];
+  let resultGallery: PhotoGallery | null = null;
+  let itemGallery: PhotoGallery | null = null;
 
   return new Promise((resolve) => {
     const body = h('div', { class: 'card-body' });
     const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true' }, body);
-    const objectUrls: string[] = [];
 
     const close = (decision: Decision | null) => {
       overlay.remove();
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      galleries.forEach((g) => g.dispose());
       dismissActive = null;
       resolve(decision);
     };
+    const cancel = async () => {
+      // Discard defect photos taken in this card when the result is not saved.
+      await resultGallery?.settled();
+      for (const id of resultGallery?.addedIds ?? []) await deletePhoto(id);
+      close(null);
+    };
     const cancelButton = (label = 'Zrušit') =>
-      h('button', { class: 'btn btn-cancel', onclick: () => close(null) }, label);
+      h('button', { class: 'btn btn-cancel', onclick: () => void cancel() }, label);
 
     const save = async (result: CardResult, buttons: HTMLButtonElement[], error: HTMLElement) => {
       buttons.forEach((b) => (b.disabled = true));
       error.textContent = '';
       try {
+        await Promise.all(galleries.map((g) => g.settled()));
         await options.onSave(result);
         close({
           outcome: result.outcome,
-          photos: result.photos.length,
+          photos: resultGallery?.count() ?? options.existingPhotos,
           decisionMs: performance.now() - shownAt,
         });
       } catch (e) {
@@ -74,6 +88,17 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
         buttons.forEach((b) => (b.disabled = false));
       }
     };
+
+    const head = (it: CatalogItem) => [
+      h(
+        'div',
+        { class: 'card-head' },
+        h('div', { class: 'card-number' }, it.itemNumber),
+        h('span', { class: 'badge' }, it.type),
+        it.local ? h('span', { class: 'badge badge-new' }, 'nový') : '',
+      ),
+      h('div', { class: 'card-location' }, locationLabel(it)),
+    ];
 
     const showUnknown = () => {
       body.replaceChildren(
@@ -83,6 +108,19 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
         h(
           'div',
           { class: 'card-actions' },
+          options.onCreateItem
+            ? h(
+                'button',
+                {
+                  class: 'btn btn-accent',
+                  onclick: () => {
+                    close(null);
+                    options.onCreateItem!(raw);
+                  },
+                },
+                'Založit nový artikl',
+              )
+            : '',
           h(
             'button',
             {
@@ -96,26 +134,32 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
       );
     };
 
-    const showDetail = (it: MockItem) => {
+    // Item photos (nameplate, overview) – kept across inspections, also for items that are OK.
+    const itemPhotos = (it: CatalogItem) => {
+      if (!itemGallery) {
+        itemGallery = createPhotoGallery(
+          { owner: 'item', inspectionId, itemNumber: it.itemNumber },
+          { addLabel: 'Vyfotit artikl (štítek…)', emptyText: 'Bez fotek artiklu.' },
+        );
+        galleries.push(itemGallery);
+      }
+      return itemGallery.element;
+    };
+
+    const showDetail = (it: CatalogItem) => {
       const error = h('div', { class: 'card-error' });
       const ok = h('button', { class: 'btn btn-ok' }, 'V pořádku');
       const defect = h('button', { class: 'btn btn-defect' }, 'Závada');
       ok.onclick = () =>
         void save(
-          { outcome: 'ok', defectDescription: '', outOfService: false, photos: [] },
+          { outcome: 'ok', defectDescription: '', outOfService: false },
           [ok, defect],
           error,
         );
       defect.onclick = () => showDefectForm(it);
 
       body.replaceChildren(
-        h(
-          'div',
-          { class: 'card-head' },
-          h('div', { class: 'card-number' }, it.itemNumber),
-          h('span', { class: 'badge' }, it.type),
-        ),
-        h('div', { class: 'card-location' }, locationLabel(it)),
+        ...head(it),
         !existing
           ? ''
           : h(
@@ -136,7 +180,10 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
         h(
           'dl',
           { class: 'card-fields' },
-          ...it.fields.flatMap(([label, value]) => [h('dt', {}, label), h('dd', {}, value)]),
+          ...displayFields(it).flatMap(([label, value]) => [
+            h('dt', {}, label),
+            h('dd', {}, value),
+          ]),
           h('dt', {}, 'Poslední kontrola'),
           h(
             'dd',
@@ -146,18 +193,23 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
               : '–',
           ),
           h('dt', {}, 'Příští kontrola'),
-          h('dd', {}, new Date(it.nextInspection).toLocaleDateString('cs-CZ')),
+          h(
+            'dd',
+            {},
+            it.nextInspection ? new Date(it.nextInspection).toLocaleDateString('cs-CZ') : '–',
+          ),
           h('dt', {}, 'QR kód'),
-          h('dd', { class: 'mono' }, it.qrCode),
+          h('dd', { class: 'mono' }, it.qrCode ?? '–'),
         ),
+        h('h3', { class: 'section-title' }, 'Fotky artiklu'),
+        itemPhotos(it),
         error,
         h('div', { class: 'card-actions' }, ok, defect),
         cancelButton(),
       );
     };
 
-    const showDefectForm = (it: MockItem) => {
-      const photos: Blob[] = [];
+    const showDefectForm = (it: CatalogItem) => {
       const error = h('div', { class: 'card-error' });
       const description = h('textarea', {
         rows: 3,
@@ -166,57 +218,33 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
       description.value = existing?.outcome === 'defect' ? existing.defectDescription : '';
       const outOfService = h('input', { type: 'checkbox' });
       outOfService.checked = existing?.outOfService ?? false;
-      const thumbs = h('div', { class: 'thumbs' });
-      const photoButton = h('button', { class: 'btn btn-neutral' }, 'Vyfotit závadu');
       const saveButton = h('button', { class: 'btn btn-defect' }, 'Uložit závadu');
-      const photoInput = h('input', {
-        type: 'file',
-        accept: 'image/*',
-        capture: 'environment',
-        class: 'hidden',
-      });
-      // Photos are compressed asynchronously; saving waits for it (a quick tap on "Uložit"
-      // right after taking a photo used to save the defect without the photo).
-      let processing: Promise<void> = Promise.resolve();
-      let pending = 0;
-      const refreshButtons = () => {
-        photoButton.textContent = photos.length
-          ? `Vyfotit další (${photos.length})`
-          : 'Vyfotit závadu';
-        saveButton.disabled = pending > 0;
-        saveButton.textContent = pending > 0 ? 'Zpracovávám fotku…' : 'Uložit závadu';
-      };
-      photoInput.onchange = () => {
-        const files = [...(photoInput.files ?? [])];
-        photoInput.value = '';
-        pending += files.length;
-        refreshButtons();
-        processing = processing.then(async () => {
-          for (const file of files) {
-            try {
-              const blob = await compressPhoto(file);
-              photos.push(blob);
-              const url = URL.createObjectURL(blob);
-              objectUrls.push(url);
-              thumbs.append(h('img', { src: url, alt: `Foto ${photos.length}` }));
-            } catch (e) {
-              error.textContent = `Fotku se nepodařilo zpracovat: ${String(e)}`;
-            } finally {
-              pending -= 1;
-              refreshButtons();
-            }
-          }
-        });
-      };
-      photoButton.onclick = () => photoInput.click();
-
       const backButton = h(
         'button',
         { class: 'btn btn-cancel', onclick: () => showDetail(it) },
         'Zpět',
       );
-      saveButton.onclick = async () => {
-        await processing;
+
+      resultGallery ??= (() => {
+        const gallery = createPhotoGallery(
+          { owner: 'result', inspectionId, itemNumber: it.itemNumber },
+          {
+            addLabel: 'Vyfotit závadu',
+            emptyText: 'Zatím žádná fotka závady.',
+            // A quick tap on "Uložit" right after taking a photo must wait for it.
+            onBusyChange: (busy) => {
+              const button = currentSave;
+              button.disabled = busy;
+              button.textContent = busy ? 'Ukládám fotku…' : 'Uložit závadu';
+            },
+          },
+        );
+        galleries.push(gallery);
+        return gallery;
+      })();
+      currentSave = saveButton;
+
+      saveButton.onclick = () => {
         if (description.value.trim() === '') {
           error.textContent = 'Napište popis závady.';
           description.focus();
@@ -227,31 +255,25 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
             outcome: 'defect',
             defectDescription: description.value.trim(),
             outOfService: outOfService.checked,
-            photos,
           },
-          [saveButton, backButton, photoButton],
+          [saveButton, backButton],
           error,
         );
       };
 
       body.replaceChildren(
-        h(
-          'div',
-          { class: 'card-head' },
-          h('div', { class: 'card-number' }, it.itemNumber),
-          h('span', { class: 'badge' }, it.type),
-        ),
-        h('div', { class: 'card-location' }, locationLabel(it)),
+        ...head(it),
         h('label', { class: 'field' }, 'Popis závady', description),
         h('label', { class: 'toggle' }, outOfService, ' Závažná – vyřadit z provozu'),
-        photoInput,
-        photoButton,
-        thumbs,
+        h('h3', { class: 'section-title' }, 'Fotky závady'),
+        resultGallery.element,
         error,
         h('div', { class: 'card-actions' }, saveButton),
         backButton,
       );
     };
+    // The defect form can be opened repeatedly (Zpět → Závada); the gallery outlives each form.
+    let currentSave = h('button');
 
     if (item) showDetail(item);
     else showUnknown();
