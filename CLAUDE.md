@@ -35,10 +35,17 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
   - Every change in a service goes with `recordAudit(tx, …)` in the same transaction.
   - `src/bootstrap.ts` creates org + first admin on an empty DB; `src/seed/demo.ts` demo data.
   - Tests in `test/` hit a real PostgreSQL (fresh database per run, `TEST_DATABASE_URL`).
-- `apps/web` (M3+) – React + Vite; `/field/*` (touch, PWA) and `/office/*` (tables).
-  Platform access (camera, scanner, files, storage, feedback) only through `src/platform/` adapters
-  (`web` now, `capacitor` later). Never call `navigator.mediaDevices` etc. from components.
-- `deploy/` – Caddyfile and the web image (serves the front end, proxies `/api`).
+  - Correlated subqueries in `sql` use qualified names (`"customer"."id"`): drizzle renders
+    column references without the table, which inside a subquery binds to the inner table.
+- `apps/web` – office UI: React 19, Vite, Mantine 9, TanStack Query + Router (code-based routes in
+  `src/router.tsx`, Czech URLs). `src/api/hooks.ts` wraps every endpoint; forms map API `issues`
+  to fields (`ApiRequestError.fieldErrors()`). Field mode (M5) will live here too; platform access
+  (camera, scanner, files, storage, feedback) only through `src/platform/` adapters.
+  - Mantine components as router links via `components/links.tsx` (`AnchorLink`, `ButtonLink`).
+  - Forms with custom validation use `noValidate`, so every error shows on its field in Czech.
+  - e2e (`apps/web/e2e`) runs the real API on a fresh database (`e2e/start-api.mjs`); Mantine
+    selects have the `combobox` role.
+- `deploy/` – Caddyfile and the web image (office app at `/`, QR spike at `/spike/`, proxies `/api`).
 - `docker-compose.yml` + `.env.example` – db, api, web; `scripts/smoke-test.sh` checks a running stack.
 - `docs/` – `architecture.md`, `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
 
@@ -61,6 +68,8 @@ pnpm check            # format:check + lint + typecheck + test (run before every
 pnpm test             # vitest (all projects; API tests need PostgreSQL → pnpm db:test)
 pnpm db:test          # throwaway PostgreSQL 16 in Docker on :5432 (db:test:stop)
 pnpm api:dev          # API with reload on :3000 (apps/api/.env from .env.example)
+pnpm --filter @revize/web dev   # office UI on :5173, proxies /api to :3000
+pnpm --filter @revize/web e2e   # office e2e: real API on a fresh DB + built UI (needs db:test)
 pnpm typecheck
 pnpm lint
 pnpm run check:licenses   # dependency license policy (docs/licenses.md)
@@ -90,4 +99,6 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   results (`docs/spike-qr-test-protocol.md`). Decision PWA vs Capacitor pending.
 - M2 backend foundation – done: full DB schema + migration, auth (sessions, roles/permissions),
   users, audit, OpenAPI, FileStorage (local disk), Docker Compose stack, demo seed.
-- Next: M3 master data in the office UI (`apps/web`).
+- M3 master data – done: API (customers, sites, location tree, equipment types incl. standards
+  library, items with bulk updates) and office UI; item numbers 1–8 digits (ADR-0012).
+- Next: M4 import XLSX/CSV.

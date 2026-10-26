@@ -369,3 +369,45 @@ describe('items', () => {
     expect(wrong.statusCode).toBe(400);
   });
 });
+
+describe('validation messages', () => {
+  it('reports an invalid contact e-mail on its field in Czech', async () => {
+    const response = await api('POST', '/api/customers', {
+      name: 'ACME',
+      contactEmail: 'neni-email',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().issues).toEqual([
+      { path: ['contactEmail'], message: 'Neplatný e-mail' },
+    ]);
+  });
+});
+
+describe('counts', () => {
+  it('reports item and site counts on customers, sites, locations and types', async () => {
+    const { customer, site, hall, ladder } = await setup();
+    await api('POST', '/api/items', {
+      siteId: site.id,
+      locationId: hall.id,
+      equipmentTypeId: ladder.id,
+      fieldValues: ladderValues,
+    });
+    await api('POST', '/api/items', {
+      siteId: site.id,
+      locationId: null,
+      equipmentTypeId: ladder.id,
+      fieldValues: ladderValues,
+    });
+
+    expect((await api('GET', `/api/customers/${customer.id}`)).json()).toMatchObject({
+      siteCount: 1,
+      itemCount: 2,
+    });
+    expect((await api('GET', `/api/sites/${site.id}`)).json()).toMatchObject({ itemCount: 2 });
+    expect((await api('GET', `/api/equipment-types/${ladder.id}`)).json()).toMatchObject({
+      itemCount: 2,
+    });
+    const locations = (await api('GET', `/api/sites/${site.id}/locations`)).json();
+    expect(locations[0]).toMatchObject({ name: 'Hala A', itemCount: 1 });
+  });
+});

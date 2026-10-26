@@ -11,13 +11,14 @@ import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
-import { equipmentType, item } from '../../db/schema.js';
+import { equipmentType } from '../../db/schema.js';
 import { AppError, notFound, validationError, versionConflict, type Issue } from '../../errors.js';
 import { recordAudit } from '../audit/service.js';
 
 type Row = typeof equipmentType.$inferSelect;
 
-const itemCount = sql<number>`(select count(*)::int from ${item} where ${item.equipmentTypeId} = ${equipmentType.id} and ${item.retiredAt} is null)`;
+// Qualified names on purpose, see customers/service.ts.
+const itemCount = sql<number>`(select count(*)::int from item i where i.equipment_type_id = "equipment_type"."id" and i.retired_at is null)`;
 
 function toDto(row: Row, count: number): EquipmentType {
   return {

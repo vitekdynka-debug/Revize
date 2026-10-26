@@ -11,16 +11,18 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
-import { customer, item, site } from '../../db/schema.js';
+import { customer, site } from '../../db/schema.js';
 import { conflict, notFound, versionConflict } from '../../errors.js';
 import { recordAudit } from '../audit/service.js';
 
 type CustomerRow = typeof customer.$inferSelect;
 type SiteRow = typeof site.$inferSelect;
 
-const siteCount = sql<number>`(select count(*)::int from ${site} where ${site.customerId} = ${customer.id} and ${site.archivedAt} is null)`;
-const customerItemCount = sql<number>`(select count(*)::int from ${item} where ${item.customerId} = ${customer.id} and ${item.retiredAt} is null)`;
-const siteItemCount = sql<number>`(select count(*)::int from ${item} where ${item.siteId} = ${site.id} and ${item.retiredAt} is null)`;
+// Correlated subqueries are written with qualified names: drizzle renders column references in
+// `sql` without the table, which inside a subquery would resolve to the inner table.
+const siteCount = sql<number>`(select count(*)::int from site s where s.customer_id = "customer"."id" and s.archived_at is null)`;
+const customerItemCount = sql<number>`(select count(*)::int from item i where i.customer_id = "customer"."id" and i.retired_at is null)`;
+const siteItemCount = sql<number>`(select count(*)::int from item i where i.site_id = "site"."id" and i.retired_at is null)`;
 
 function toCustomer(row: CustomerRow, counts: { siteCount: number; itemCount: number }): Customer {
   return {

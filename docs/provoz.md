@@ -21,12 +21,14 @@ docker compose up -d --build
 docker compose ps        # db, api a web musí být „healthy“ / „running“
 ```
 
-- Aplikace běží na `https://localhost` (při `SITE_ADDRESS=localhost`). Prohlížeč upozorní na
-  certifikát místní certifikační autority Caddy. Pro první vyzkoušení na stejném PC to stačí.
+- Kancelářská aplikace běží na `https://localhost` (při `SITE_ADDRESS=localhost`), QR spike pro
+  test skeneru na `https://localhost/spike/`. Prohlížeč upozorní na certifikát místní
+  certifikační autority Caddy. Pro první vyzkoušení na stejném PC to stačí.
 - Přihlášení: `ADMIN_EMAIL` / `ADMIN_PASSWORD` z `.env`. Pokud jste heslo nevyplnili, vygeneruje
   se náhodné a najdete ho v `docker compose logs api`.
 - S `SEED_DEMO=true` se při prvním spuštění vloží ukázková data: zákazník „Ukázkový sklad
-  s.r.o.“, typy Žebřík a Regál, 30 artiklů a technik `technik@revize.local` / `technik-demo-heslo`.
+  s.r.o.“, celá knihovna typů vybavení podle norem, 35 artiklů (pětimístná i čtyřmístná řada)
+  a technik `technik@revize.local` / `technik-demo-heslo`.
 - API dokumentace (OpenAPI) je na `https://<adresa>/api/docs`.
 - Kontrolu běžící instance udělá `scripts/smoke-test.sh https://<adresa> <admin-email> <heslo>`.
 
@@ -68,5 +70,6 @@ pnpm install
 pnpm db:test                       # PostgreSQL v Dockeru pro testy a vývoj (port 5432)
 cp apps/api/.env.example apps/api/.env
 pnpm api:dev                       # API na http://localhost:3000, dokumentace /api/docs
+pnpm --filter @revize/web dev      # kancelář na http://localhost:5173 (API přes proxy)
 pnpm check                         # formát, lint, typy, všechny testy (vyžaduje db:test)
 ```

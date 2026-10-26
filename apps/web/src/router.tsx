@@ -1,0 +1,121 @@
+import type { QueryClient } from '@tanstack/react-query';
+import {
+  Navigate,
+  Outlet,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
+import { z } from 'zod';
+import { Layout } from './components/Layout.js';
+import { AccountPage } from './pages/AccountPage.js';
+import { CustomerPage } from './pages/CustomerPage.js';
+import { CustomersPage } from './pages/CustomersPage.js';
+import { EquipmentTypePage } from './pages/EquipmentTypePage.js';
+import { EquipmentTypesPage } from './pages/EquipmentTypesPage.js';
+import { ItemsPage } from './pages/ItemsPage.js';
+import { LoginPage } from './pages/LoginPage.js';
+import { SitePage } from './pages/SitePage.js';
+import { UsersPage } from './pages/UsersPage.js';
+
+const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  component: Outlet,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prihlaseni',
+  validateSearch: z.object({ next: z.string().optional() }),
+  component: LoginPage,
+});
+
+/** Everything else needs a signed-in user (Layout redirects to /prihlaseni). */
+const appRoute = createRoute({ getParentRoute: () => rootRoute, id: 'app', component: Layout });
+
+const indexRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/',
+  component: () => <Navigate to="/zakaznici" />,
+});
+
+const customersRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/zakaznici',
+  component: CustomersPage,
+});
+export const customerRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/zakaznici/$customerId',
+  component: CustomerPage,
+});
+export const siteRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/provozovny/$siteId',
+  component: SitePage,
+});
+const typesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/typy',
+  component: EquipmentTypesPage,
+});
+export const typeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/typy/$typeId',
+  component: EquipmentTypePage,
+});
+
+export const itemsSearchSchema = z.object({
+  customerId: z.string().optional(),
+  siteId: z.string().optional(),
+  equipmentTypeId: z.string().optional(),
+  locationId: z.string().optional(),
+  status: z.enum(['in_service', 'out_of_service']).optional(),
+  q: z.string().optional(),
+  sort: z.enum(['location', 'itemNumber', 'type', 'nextInspection', 'updated']).optional(),
+  page: z.number().int().min(1).optional(),
+});
+export type ItemsSearch = z.infer<typeof itemsSearchSchema>;
+
+export const itemsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/artikly',
+  validateSearch: itemsSearchSchema,
+  component: ItemsPage,
+});
+const usersRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/uzivatele',
+  component: UsersPage,
+});
+const accountRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/ucet',
+  component: AccountPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  loginRoute,
+  appRoute.addChildren([
+    indexRoute,
+    customersRoute,
+    customerRoute,
+    siteRoute,
+    typesRoute,
+    typeRoute,
+    itemsRoute,
+    usersRoute,
+    accountRoute,
+  ]),
+]);
+
+export const router = createRouter({
+  routeTree,
+  context: { queryClient: undefined! },
+  defaultPreload: 'intent',
+});
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}

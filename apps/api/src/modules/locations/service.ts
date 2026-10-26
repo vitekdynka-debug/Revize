@@ -16,7 +16,8 @@ import { recordAudit } from '../audit/service.js';
 
 type LocationRow = typeof location.$inferSelect;
 
-const directItemCount = sql<number>`(select count(*)::int from ${item} where ${item.locationId} = ${location.id} and ${item.retiredAt} is null)`;
+// Qualified names on purpose, see customers/service.ts.
+const directItemCount = sql<number>`(select count(*)::int from item i where i.location_id = "location"."id" and i.retired_at is null)`;
 
 /** Names of all locations of a site (archived too), to turn path ids into readable paths. */
 export async function locationNames(db: DbOrTx, ids: string[]): Promise<Map<string, string>> {

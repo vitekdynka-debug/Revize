@@ -41,8 +41,11 @@ const customerFields = {
   address: optionalText(300),
   contactName: optionalText(100),
   contactEmail: z
-    .union([z.literal(''), z.email('Neplatný e-mail').max(200)])
-    .transform((value) => (value === '' ? null : value))
+    .string()
+    .trim()
+    .max(200)
+    .refine((value) => value === '' || z.email().safeParse(value).success, 'Neplatný e-mail')
+    .transform((value) => (value === '' ? null : value.toLowerCase()))
     .nullable()
     .optional(),
   contactPhone: optionalText(50),
