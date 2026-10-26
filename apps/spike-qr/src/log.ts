@@ -1,4 +1,4 @@
-export type InputMode = 'camera' | 'wedge' | 'manual' | 'keypad';
+export type InputMode = 'camera' | 'wedge' | 'manual' | 'keypad' | 'list';
 export type Outcome = 'ok' | 'defect' | 'unknown';
 
 export interface CheckMeasurement {

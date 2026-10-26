@@ -1,4 +1,5 @@
 import { createWebFeedback } from '@revize/scanner';
+import { photoCount, resultFor, saveResult, startInspection } from './inspection.js';
 import { showItemCard } from './item-card.js';
 import { addLog, type InputMode } from './log.js';
 import { findItem } from './mock-items.js';
@@ -31,7 +32,10 @@ export interface CheckInput {
   decodeMs?: number;
 }
 
-/** Shows the quick-check card for a recognized code and records the measurement. */
+/**
+ * Shows the quick-check card for a recognized code, stores the result in the open inspection
+ * (started automatically if there is none) and records the timing measurement.
+ */
 export async function runCheck(input: CheckInput): Promise<void> {
   if (cardOpen) return;
   cardOpen = true;
@@ -40,7 +44,16 @@ export async function runCheck(input: CheckInput): Promise<void> {
     if (item) feedback.success();
     else feedback.failure();
 
-    const decision = await showItemCard(item, input.raw);
+    const inspection = await startInspection();
+    const existing = item ? await resultFor(inspection.id, item.itemNumber) : null;
+    const decision = await showItemCard({
+      item,
+      raw: input.raw,
+      existing,
+      existingPhotos: existing ? await photoCount(existing.id) : 0,
+      onSave: (result) =>
+        saveResult(inspection.id, item!.itemNumber, { ...result, mode: input.mode }),
+    });
     if (!decision) return;
     addLog({
       kind: 'check',

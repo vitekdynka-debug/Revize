@@ -6,12 +6,21 @@ použije beze změny v `apps/web`.
 
 ## Co umí
 
-- **Rychlá kontrola kamerou:** skener zůstává otevřený. Po načtení se hned ukáže karta artiklu
-  s tlačítky **V pořádku / Závada**. OK je jeden dotek a pak se vrací ke skeneru.
+- **Kontrola:** zahájení, průběh „zkontrolováno X z Y“, seznam artiklů seřazený podle umístění
+  (nezkontrolované / zkontrolované / vše), ukončení se souhrnem a export **výsledků (CSV)**
+  a **fotek (ZIP** se soubory `číslo_01.jpg` a sidecar CSV). Výsledky i fotky se uloží do
+  IndexedDB dřív, než se karta zavře, takže přežijí i zavření aplikace.
+- **Rychlá kontrola kamerou:** skener zůstává otevřený. Po načtení se ukáže karta s detailem
+  artiklu (umístění, vlastní pole, poslední a příští kontrola) a s tlačítky **V pořádku /
+  Závada / Zrušit**. U závady se zadává popis, příznak vyřazení a fotky (zmenšené na 2048 px).
+- **Výběr správného štítku:** načte se kód nejblíž zaměřovacímu kříži. Přijme se až po několika
+  shodných načteních a po zavření karty je krátká prodleva. Volitelně lze skenovat jen po
+  stisku „Načíst“.
 - Dekodér zxing-wasm ve Web Workeru (WASM je součástí aplikace, nic se nestahuje z CDN), nebo
   nativní `BarcodeDetector`, pokud ho prohlížeč má.
 - Skenuje se jen ve výřezu uprostřed obrazu (ROI) a výřez se zmenší pro dekodér. Svítilna
-  a zoom fungují tam, kde je zařízení podporuje. Zvuk při načtení, experimentální haptika na
+  a zoom (posuvník a tlačítka 1×/2×/3×, změny jdou za sebou, aby se iOS nezasekl) fungují tam,
+  kde je zařízení podporuje. Zvuk při načtení, experimentální haptika na
   iOS 18+, ochrana proti dvojímu načtení a Wake Lock (displej nezhasne).
 - **Bluetooth čtečka** v režimu klávesnice funguje na kterékoli obrazovce: rychlá série znaků
   zakončená Enterem.

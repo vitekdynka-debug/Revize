@@ -24,6 +24,18 @@ Skenování musí být rychlejší než ruční zadání pětimístného čísla
 - Jádro je v `packages/scanner`, nezávislé na frameworku. Capacitor adaptér by implementoval
   stejné rozhraní `ScannerService` nativní čtečkou.
 
+## Zjištění z 1. testu na iPadu (2026-10-26)
+
+| Zjištění                                                                    | Příčina                                                                                              | Úprava (spike v2)                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Čtení je rychlé, dekodér stíhá                                              | –                                                                                                    | –                                                                                                                                                                                                                                             |
+| Na archu se štítky vedle sebe se hned po zavření karty načte náhodný soused | zxing vrací více kódů a brali jsme první; hned po zavření karty se skenovalo znovu                   | výběr kódu **nejblíž zaměřovacímu kříži** (`pickCentralCode`, zóna kolem středu), kód se přijme až po **3 načteních po sobě** (`StableReadFilter`), **prodleva 0,8 s** po zavření karty, volitelný režim „Načíst“ (dekóduje se jen po stisku) |
+| Zaseknutí aplikace při zapnuté svítilně a posunu zoomu                      | souběžná volání `applyConstraints` při tažení posuvníku; iOS Safari se zasekne                       | `ConstraintQueue`: nejvýš jedno volání najednou, změny se slučují a vždy se posílá úplný stav (svítilna i zoom), k tomu tlačítka 1×/2×/3×                                                                                                     |
+| Po úplném zavření aplikace se iPad znovu ptá na kameru                      | iOS u webových aplikací na ploše nepamatuje oprávnění kamery mezi spuštěními. Z PWA to obejít nejde. | Zdokumentováno. Je to **argument pro Capacitor**, protože nativní aplikace si oprávnění pamatuje trvale.                                                                                                                                      |
+
+Funkční nedostatky spiku (chybějící Zrušit, chybějící detail artiklu, kontrolu nešlo ukončit
+a exportovat) jsou opravené. Kontrola se ukládá do IndexedDB a exportuje jako CSV + ZIP fotek.
+
 ## Důsledky
 
 - Pokud spike ukáže nedostatečnou rychlost v šeru nebo na malých štítcích, nebo ztrátu oprávnění

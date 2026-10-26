@@ -99,6 +99,26 @@ h2 {
 .btn-neutral {
   background: var(--neutral);
 }
+.btn-accent {
+  background: var(--accent);
+}
+.btn-cancel {
+  background: transparent;
+  border: 2px solid var(--neutral);
+  min-height: 64px;
+}
+.btn-end {
+  margin-left: auto;
+  background: #b45309;
+}
+.btn-finish {
+  width: 100%;
+  margin-top: 24px;
+  background: #b45309;
+}
+.btn:disabled {
+  opacity: 0.5;
+}
 .btn.active {
   background: #eab308;
   color: #000;
@@ -165,9 +185,46 @@ h2 {
   gap: 12px;
   align-items: center;
 }
-.scan-zoom {
+.scan-progress {
   flex: 1;
-  max-width: 320px;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 1px 3px #000;
+}
+.scan-zoom {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 56px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.scan-zoom input {
+  flex: 1;
+  max-width: 360px;
+  height: 44px;
+}
+.scan-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(#f43f5e, #f43f5e) center / 3px 100% no-repeat,
+    linear-gradient(#f43f5e, #f43f5e) center / 100% 3px no-repeat;
+}
+.scan-tap {
+  position: absolute;
+  left: 50%;
+  bottom: max(70px, calc(env(safe-area-inset-bottom) + 60px));
+  transform: translateX(-50%);
+  min-width: 240px;
+  min-height: 80px;
+  font-size: 1.5rem;
 }
 .scan-stats {
   position: absolute;
@@ -202,6 +259,9 @@ h2 {
 .card-body {
   width: 100%;
   max-width: 760px;
+  max-height: 94vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 24px 24px max(24px, env(safe-area-inset-bottom));
   border-radius: 24px 24px 0 0;
   background: var(--surface);
@@ -214,6 +274,60 @@ h2 {
   font-weight: 800;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--neutral);
+  font-weight: 600;
+}
+.card-location {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.card-status {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #1e3a5f;
+}
+.card-status.defect {
+  background: #5f1e1e;
+}
+.card-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 20px;
+  margin: 0;
+}
+.card-fields dt {
+  color: var(--muted);
+}
+.card-fields dd {
+  margin: 0;
+  font-weight: 600;
+}
+.card-error {
+  color: #fca5a5;
+  font-weight: 600;
+}
+.card-error:empty {
+  display: none;
+}
+.thumbs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.thumbs img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
 }
 .card-number.unknown {
   font-size: 2rem;
@@ -261,6 +375,91 @@ h2 {
 .toggle input {
   width: 28px;
   height: 28px;
+}
+
+/* Inspection */
+.panel {
+  margin: 16px 0;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.panel h2 {
+  margin-top: 0;
+}
+.progress {
+  position: relative;
+  height: 36px;
+  border-radius: 10px;
+  background: #0b1222;
+  overflow: hidden;
+}
+.progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ok);
+}
+.progress span {
+  position: relative;
+  display: block;
+  line-height: 36px;
+  padding: 0 12px;
+  font-weight: 600;
+}
+.segmented {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.item-row {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+.item-number {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.item-main small {
+  color: var(--muted);
+}
+.chip {
+  min-width: 80px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 700;
+  background: #334155;
+}
+.chip.ok {
+  background: var(--ok);
+}
+.chip.defect {
+  background: var(--defect);
 }
 
 /* Manual entry */

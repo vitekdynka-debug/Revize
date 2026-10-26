@@ -10,19 +10,35 @@ import DecodeWorker from '@revize/scanner/decode-worker?worker';
 import { runCheck } from '../check-flow.js';
 import { h } from '../dom.js';
 import { cameraPermission, isStandalone } from '../env.js';
+import { activeInspection, summarize } from '../inspection.js';
 import { addLog } from '../log.js';
 import { RESOLUTIONS, loadSettings } from '../settings.js';
+
+const ZOOM_PRESETS = [1, 2, 3];
+/** In tap mode, give up after this long without a code. */
+const TAP_TIMEOUT_MS = 4000;
 
 /** Continuous camera scanning ("rychlá kontrola"). Returns a cleanup function. */
 export function scanView(root: HTMLElement): () => void {
   const settings = loadSettings();
+  const tapMode = settings.trigger === 'tap';
   const video = h('video', { class: 'scan-video', playsinline: true, muted: true, autoplay: true });
   const roiSize = `${settings.roiFraction * 100}vmin`;
-  const roi = h('div', { class: 'scan-roi', style: `width:${roiSize};height:${roiSize}` });
+  const roi = h(
+    'div',
+    { class: 'scan-roi', style: `width:${roiSize};height:${roiSize}` },
+    h('div', { class: 'scan-crosshair' }),
+  );
   const stats = h('div', { class: 'scan-stats mono' }, 'Spouštím kameru…');
-  const status = h('div', { class: 'scan-status' }, 'Namiřte na QR kód');
+  const status = h(
+    'div',
+    { class: 'scan-status' },
+    tapMode ? 'Zaměřte kříž na kód a stiskněte Načíst' : 'Zaměřte kříž na QR kód',
+  );
+  const progress = h('a', { href: '#/inspection', class: 'scan-progress' }, '');
   const torchButton = h('button', { class: 'btn btn-small hidden' }, 'Svítilna');
-  const zoomInput = h('input', { type: 'range', class: 'scan-zoom hidden', 'aria-label': 'Zoom' });
+  const zoomBox = h('div', { class: 'scan-zoom hidden' });
+  const tapButton = h('button', { class: 'btn btn-ok scan-tap' }, 'Načíst');
 
   root.replaceChildren(
     h(
@@ -34,11 +50,13 @@ export function scanView(root: HTMLElement): () => void {
         'div',
         { class: 'scan-top' },
         h('a', { href: '#/', class: 'btn btn-small' }, '← Zpět'),
+        progress,
         torchButton,
-        zoomInput,
       ),
+      zoomBox,
       stats,
       status,
+      tapMode && tapButton,
     ),
   );
 
@@ -49,6 +67,14 @@ export function scanView(root: HTMLElement): () => void {
   let torchOn = false;
   let disposed = false;
   let starting: Promise<void> | null = null;
+  let tapTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const refreshProgress = async () => {
+    const inspection = await activeInspection();
+    if (!inspection || disposed) return;
+    const s = await summarize(inspection.id);
+    progress.textContent = `Zkontrolováno ${s.checked} z ${s.total} ›`;
+  };
 
   const requestWakeLock = async () => {
     try {
@@ -96,20 +122,42 @@ export function scanView(root: HTMLElement): () => void {
   };
 
   const setupControls = (cam: CameraHandle) => {
+    torchOn = false;
+    torchButton.classList.remove('active');
     torchButton.classList.toggle('hidden', !cam.torchSupported);
-    torchButton.onclick = async () => {
+    torchButton.onclick = () => {
       torchOn = !torchOn;
-      await cam.setTorch(torchOn).catch(() => (torchOn = false));
       torchButton.classList.toggle('active', torchOn);
+      void cam.setTorch(torchOn);
     };
-    if (cam.zoom && cam.zoom.max > cam.zoom.min) {
-      zoomInput.classList.remove('hidden');
-      zoomInput.min = String(cam.zoom.min);
-      zoomInput.max = String(cam.zoom.max);
-      zoomInput.step = String(cam.zoom.step || 0.1);
-      zoomInput.value = String(cam.zoom.min);
-      zoomInput.oninput = () => void cam.setZoom(Number(zoomInput.value));
-    }
+
+    const zoom = cam.zoom;
+    if (!zoom || zoom.max <= zoom.min) return;
+    // Changes are coalesced by the camera's constraint queue, so dragging cannot flood iOS.
+    const slider = h('input', {
+      type: 'range',
+      min: zoom.min,
+      max: zoom.max,
+      step: zoom.step || 0.1,
+      value: zoom.min,
+      'aria-label': 'Zoom',
+    });
+    slider.oninput = () => void cam.setZoom(Number(slider.value));
+    const presets = ZOOM_PRESETS.filter((z) => z >= zoom.min && z <= zoom.max).map((z) =>
+      h(
+        'button',
+        {
+          class: 'btn btn-small',
+          onclick: () => {
+            slider.value = String(z);
+            void cam.setZoom(z);
+          },
+        },
+        `${z}×`,
+      ),
+    );
+    zoomBox.replaceChildren(...presets, slider);
+    zoomBox.classList.remove('hidden');
   };
 
   const start = async () => {
@@ -120,6 +168,7 @@ export function scanView(root: HTMLElement): () => void {
         : new ZxingWorkerEngine(() => new DecodeWorker(), {
             tryHarder: settings.tryHarder,
             formats: ['QRCode'],
+            maxSymbols: 4,
           });
     await engine.init();
     // The app may have been closed or backgrounded while the camera was starting.
@@ -133,6 +182,9 @@ export function scanView(root: HTMLElement): () => void {
       roiFraction: settings.roiFraction,
       maxDecodeSide: settings.maxDecodeSide,
       cooldownMs: settings.cooldownMs,
+      confirmHits: settings.confirmHits,
+      rearmDelayMs: tapMode ? 0 : settings.rearmDelayMs,
+      centerZone: settings.centerZone,
       onStats: (s) => {
         stats.textContent =
           `${engine?.name} · ${s.fps.toFixed(1)} sn/s · dekód ${s.avgDecodeMs.toFixed(1)} ms · ` +
@@ -141,6 +193,7 @@ export function scanView(root: HTMLElement): () => void {
       },
       onError: (error) => (status.textContent = `Chyba dekodéru: ${error.message}`),
       onScan: (scan) => {
+        clearTimeout(tapTimer);
         void runCheck({
           mode: 'camera',
           raw: scan.text,
@@ -150,22 +203,41 @@ export function scanView(root: HTMLElement): () => void {
       },
     });
     session.start();
+    if (tapMode) session.pause();
     await requestWakeLock();
+  };
+
+  tapButton.onclick = () => {
+    if (!session) return;
+    status.textContent = 'Hledám kód…';
+    session.resume(true);
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => {
+      session?.pause();
+      status.textContent = 'Kód nenalezen – zaměřte kříž na kód a zkuste znovu';
+    }, TAP_TIMEOUT_MS);
   };
 
   // Taking a photo with the system camera can stop our stream on iOS – recover it.
   const afterCard = async () => {
     if (disposed) return;
+    void refreshProgress();
     if (camera && camera.track.readyState === 'ended') {
       camera.stop();
       await startCamera('restart');
     } else if (video.paused) {
       await video.play().catch(() => undefined);
     }
+    if (tapMode) {
+      status.textContent = 'Zaměřte kříž na kód a stiskněte Načíst';
+      return;
+    }
+    status.textContent = 'Zaměřte kříž na QR kód';
     session?.resume();
   };
 
   const stopAll = () => {
+    clearTimeout(tapTimer);
     session?.stop();
     session = null;
     engine?.dispose();
@@ -189,6 +261,7 @@ export function scanView(root: HTMLElement): () => void {
     else if (!session) run();
   };
   document.addEventListener('visibilitychange', onVisibility);
+  void refreshProgress();
   run();
 
   return () => {

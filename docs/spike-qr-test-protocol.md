@@ -34,6 +34,17 @@ Po každém bloku si poznamenejte dojmy. Čísla se ukládají sama do _Měřen�
 | T13 | Zvuk a haptika            | Zkuste se zapnutým i vypnutým tichým režimem.                                                                  | Je zvuk slyšet? Je cítit haptika (iOS 18+)?                  |
 | T14 | Nastavení                 | Zopakujte T3 s ROI 40 % / 80 % a s rozlišením 720p / 4k.                                                       | Vliv na rychlost a spolehlivost                              |
 
+## Kolo 2 (po úpravách 2026-10-26)
+
+| #   | Test             | Jak                                                                                                                                                                                                                                                   | Co sledovat                                                               |
+| --- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| R1  | Sousední štítky  | Arch C: míříte křížem na jeden štítek, sousedé jsou v záběru.                                                                                                                                                                                         | Načte se vždy ten pod křížem? Je rychlost pořád v pohodě?                 |
+| R2  | Citlivost        | _Nastavení_: Potvrzení 1/2/3/5, Prodleva 0–1,5 s, Zóna úzká/střední/široká.                                                                                                                                                                           | Která kombinace je nejlepší? (výchozí: 3, 0,8 s, střední)                 |
+| R3  | Režim „Načíst“   | _Nastavení → Spouštění skenu → Až po stisku „Načíst“_.                                                                                                                                                                                                | Je to pro hustě nalepené štítky lepší než automatický režim?              |
+| R4  | Svítilna + zoom  | Zapněte svítilnu a táhněte posuvníkem zoomu tam a zpět, zkuste i tlačítka 1×/2×/3×.                                                                                                                                                                   | Nesmí se zaseknout. Zůstane svítilna zapnutá?                             |
+| R5  | Celá kontrola    | _Zahájit kontrolu_, část artiklů skenem, část ze _Seznamu_, jednu závadu s fotkami a vyřazením, pak zavřete aplikaci (swipe), znovu otevřete a zkontrolujte, že nic nezmizelo. _Ukončit kontrolu → Výsledky (CSV) a Fotky (ZIP)_ → Uložit do Souborů. | Data po restartu, obsah CSV/ZIP v aplikaci Soubory, otevření CSV v Excelu |
+| R6  | Oprávnění kamery | Zkuste _Nastavení iPadu → Aplikace → Safari → Kamera → Povolit_ a znovu T2.                                                                                                                                                                           | Ptá se pořád? (pokud ano, je to omezení PWA, viz ADR-0009)                |
+
 ## Výstup
 
 _Měření → Sdílet CSV_ (nebo _Stáhnout CSV_) a soubor mi pošlete spolu s poznámkami:

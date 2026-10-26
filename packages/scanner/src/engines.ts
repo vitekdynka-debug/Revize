@@ -4,7 +4,7 @@ import type { DecoderSettings, WorkerRequest, WorkerResponse } from './worker-pr
 export type { DecoderSettings } from './worker-protocol.js';
 
 interface Pending {
-  resolve: (code: DecodedCode | null) => void;
+  resolve: (codes: DecodedCode[]) => void;
   reject: (error: Error) => void;
 }
 
@@ -22,7 +22,11 @@ export class ZxingWorkerEngine implements DecodeEngine {
 
   constructor(
     private readonly createWorker: () => Worker,
-    private readonly settings: DecoderSettings = { tryHarder: true, formats: ['QRCode'] },
+    private readonly settings: DecoderSettings = {
+      tryHarder: true,
+      formats: ['QRCode'],
+      maxSymbols: 4,
+    },
   ) {}
 
   init(): Promise<void> {
@@ -41,7 +45,7 @@ export class ZxingWorkerEngine implements DecodeEngine {
         if (message.type === 'error') pending?.reject(new Error(message.message));
         else if (message.type === 'result') {
           this.lastDecodeMs = message.ms;
-          pending?.resolve(message.code);
+          pending?.resolve(message.codes);
         }
       };
       worker.onerror = (event) => reject(new Error(event.message));
@@ -49,7 +53,7 @@ export class ZxingWorkerEngine implements DecodeEngine {
     });
   }
 
-  decode(frame: ImageData): Promise<DecodedCode | null> {
+  decode(frame: ImageData): Promise<DecodedCode[]> {
     const id = this.nextId++;
     const buffer = frame.data.buffer as ArrayBuffer;
     return new Promise((resolve, reject) => {
@@ -75,6 +79,7 @@ export class ZxingWorkerEngine implements DecodeEngine {
 interface DetectedBarcode {
   rawValue: string;
   format: string;
+  boundingBox: DOMRectReadOnly;
 }
 interface BarcodeDetectorInstance {
   detect(source: ImageBitmapSource): Promise<DetectedBarcode[]>;
@@ -109,10 +114,14 @@ export class NativeDetectorEngine implements DecodeEngine {
     this.detector = new Detector({ formats: ['qr_code'] });
   }
 
-  async decode(frame: ImageData): Promise<DecodedCode | null> {
+  async decode(frame: ImageData): Promise<DecodedCode[]> {
     if (!this.detector) throw new Error('Engine not initialized');
-    const [first] = await this.detector.detect(frame);
-    return first ? { text: first.rawValue, format: first.format } : null;
+    const found = await this.detector.detect(frame);
+    return found.map(({ rawValue, format, boundingBox: box }) => ({
+      text: rawValue,
+      format,
+      center: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    }));
   }
 
   dispose(): void {

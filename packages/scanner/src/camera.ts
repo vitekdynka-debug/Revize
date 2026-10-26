@@ -61,22 +61,55 @@ export async function openCamera(
     await applyAdvanced(track, { focusMode: 'continuous' }).catch(() => undefined);
   }
 
-  const applyOrThrow = (constraint: Record<string, unknown>) => applyAdvanced(track, constraint);
+  const torchSupported = capabilities.torch === true;
+  const zoom = capabilities.zoom ?? null;
+  const constraints = new ConstraintQueue(track);
   return {
     stream,
     track,
-    torchSupported: capabilities.torch === true,
-    zoom: capabilities.zoom ?? null,
+    torchSupported,
+    zoom,
     width: video.videoWidth,
     height: video.videoHeight,
     startMs: performance.now() - startedAt,
-    setTorch: (on) => applyOrThrow({ torch: on }),
-    setZoom: (value) => applyOrThrow({ zoom: value }),
+    setTorch: (on) => (torchSupported ? constraints.set({ torch: on }) : Promise.resolve()),
+    setZoom: (value) =>
+      zoom
+        ? constraints.set({ zoom: Math.min(zoom.max, Math.max(zoom.min, value)) })
+        : Promise.resolve(),
     stop: () => {
       stream.getTracks().forEach((t) => t.stop());
       video.srcObject = null;
     },
   };
+}
+
+/**
+ * Serializes and coalesces camera setting changes. iOS Safari freezes when several
+ * `applyConstraints` calls overlap (e.g. dragging the zoom slider with the torch on), so at most
+ * one call is in flight and it always carries the complete desired state (torch + zoom together,
+ * otherwise iOS may switch the torch off when only zoom changes).
+ */
+export class ConstraintQueue {
+  private readonly desired: Record<string, unknown> = {};
+  private running: Promise<void> | null = null;
+  private dirty = false;
+
+  constructor(private readonly track: MediaStreamTrack) {}
+
+  set(patch: Record<string, unknown>): Promise<void> {
+    Object.assign(this.desired, patch);
+    this.dirty = true;
+    this.running ??= this.drain().finally(() => (this.running = null));
+    return this.running;
+  }
+
+  private async drain() {
+    while (this.dirty) {
+      this.dirty = false;
+      await applyAdvanced(this.track, { ...this.desired }).catch(() => undefined);
+    }
+  }
 }
 
 function applyAdvanced(track: MediaStreamTrack, constraint: Record<string, unknown>) {

@@ -3,7 +3,9 @@ import { registerSW } from 'virtual:pwa-register';
 import { feedback, isCardOpen, runCheck } from './check-flow.js';
 import { dismissItemCard } from './item-card.js';
 import './styles.css';
+import { exportsView } from './views/exports.js';
 import { homeView } from './views/home.js';
+import { inspectionView } from './views/inspection.js';
 import { logView } from './views/log.js';
 import { manualView } from './views/manual.js';
 import { scanView } from './views/scan.js';
@@ -16,6 +18,8 @@ const root = document.getElementById('app')!;
 const routes: Record<string, (root: HTMLElement) => () => void> = {
   '/': homeView,
   '/scan': scanView,
+  '/inspection': inspectionView,
+  '/exports': exportsView,
   '/manual': (r) => manualView(r, 'manual'),
   '/keypad': (r) => manualView(r, 'keypad'),
   '/sheet': sheetView,

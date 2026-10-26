@@ -2,6 +2,8 @@
 export interface DecodedCode {
   text: string;
   format: string;
+  /** Center of the code in frame pixel coordinates, when the engine reports a position. */
+  center?: { x: number; y: number };
 }
 
 export type ScanSource = 'camera' | 'keyboard-wedge';
@@ -22,7 +24,8 @@ export interface ScanEvent {
 export interface DecodeEngine {
   readonly name: string;
   init(): Promise<void>;
-  decode(frame: ImageData): Promise<DecodedCode | null>;
+  /** All codes found in the frame (possibly several labels next to each other). */
+  decode(frame: ImageData): Promise<DecodedCode[]>;
   dispose(): void;
 }
 

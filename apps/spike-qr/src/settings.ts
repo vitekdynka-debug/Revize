@@ -9,6 +9,14 @@ export interface SpikeSettings {
   maxDecodeSide: number;
   tryHarder: boolean;
   cooldownMs: number;
+  /** 'auto' scans continuously; 'tap' decodes only after tapping "Načíst". */
+  trigger: 'auto' | 'tap';
+  /** Reads of the same code required before it is accepted. */
+  confirmHits: number;
+  /** Pause after closing a card before the next code is accepted (ms). */
+  rearmDelayMs: number;
+  /** How close to the crosshair a code must be (fraction of the scan area side). */
+  centerZone: number;
   sound: boolean;
   iosHaptic: boolean;
   deviceId: string;
@@ -27,6 +35,10 @@ const DEFAULTS: SpikeSettings = {
   maxDecodeSide: 720,
   tryHarder: true,
   cooldownMs: 2500,
+  trigger: 'auto',
+  confirmHits: 3,
+  rearmDelayMs: 800,
+  centerZone: 0.25,
   sound: true,
   iosHaptic: true,
   deviceId: '',

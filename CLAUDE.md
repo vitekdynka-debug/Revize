@@ -69,4 +69,5 @@ pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a QR vide
 ## Status
 
 - M0 repo skeleton – done.
-- M1 QR spike – in progress (see `apps/spike-qr/README.md`, `docs/spike-qr-test-protocol.md`).
+- M1 QR spike – iteration 2 after the first iPad test (findings in ADR-0009); waiting for round 2
+  results (`docs/spike-qr-test-protocol.md`). Decision PWA vs Capacitor pending.

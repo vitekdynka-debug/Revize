@@ -79,6 +79,37 @@ export function settingsView(root: HTMLElement): () => void {
         ['1000', '2500', '5000'].map((v) => [v, `${Number(v) / 1000} s`]),
         (v) => update({ cooldownMs: Number(v) }),
       ),
+      select(
+        'Spouštění skenu',
+        settings.trigger,
+        [
+          ['auto', 'Automaticky (skener stále běží)'],
+          ['tap', 'Až po stisku „Načíst“'],
+        ],
+        (v) => update({ trigger: v as SpikeSettings['trigger'] }),
+      ),
+      select(
+        'Potvrzení kódu (počet načtení po sobě)',
+        String(settings.confirmHits),
+        ['1', '2', '3', '5'].map((v) => [v, v === '1' ? '1 (nejrychlejší)' : v]),
+        (v) => update({ confirmHits: Number(v) }),
+      ),
+      select(
+        'Prodleva po zavření karty',
+        String(settings.rearmDelayMs),
+        ['0', '500', '800', '1500'].map((v) => [v, `${Number(v) / 1000} s`]),
+        (v) => update({ rearmDelayMs: Number(v) }),
+      ),
+      select(
+        'Zóna kolem zaměřovače',
+        String(settings.centerZone),
+        [
+          ['0.15', 'Úzká – jen kód přesně na kříži'],
+          ['0.25', 'Střední'],
+          ['0.4', 'Široká'],
+        ],
+        (v) => update({ centerZone: Number(v) }),
+      ),
       checkbox('tryHarder (pomalejší, spolehlivější)', settings.tryHarder, (v) =>
         update({ tryHarder: v }),
       ),

@@ -1,6 +1,8 @@
 import { computeCropRect, fitWithin } from './crop.js';
 import { ScanDeduper } from './dedupe.js';
 import { ZxingWorkerEngine } from './engines.js';
+import { pickCentralCode } from './pick.js';
+import { StableReadFilter } from './stable-read.js';
 import type { DecodeEngine, ScanEvent, ScanStats } from './types.js';
 
 export interface ScanSessionOptions {
@@ -14,6 +16,13 @@ export interface ScanSessionOptions {
   cooldownMs?: number;
   /** Pause decoding after a successful scan until `resume()` is called. */
   pauseOnScan?: boolean;
+  /** A code must be read this many times (within `confirmWindowMs`) before it is accepted. */
+  confirmHits?: number;
+  confirmWindowMs?: number;
+  /** After `start()`/`resume()` nothing is accepted for this long (ms) – time to aim. */
+  rearmDelayMs?: number;
+  /** Only codes whose center is within this fraction of the frame side from the center count. */
+  centerZone?: number;
   onScan: (event: ScanEvent) => void;
   onStats?: (stats: ScanStats) => void;
   onError?: (error: Error) => void;
@@ -31,6 +40,7 @@ export class ScanSession {
   roiFraction: number;
   maxDecodeSide: number;
   private readonly deduper: ScanDeduper;
+  private readonly stable: StableReadFilter;
   private readonly canvas = document.createElement('canvas');
   private readonly context: CanvasRenderingContext2D;
   private running = false;
@@ -44,6 +54,7 @@ export class ScanSession {
     this.roiFraction = options.roiFraction ?? 0.6;
     this.maxDecodeSide = options.maxDecodeSide ?? 720;
     this.deduper = new ScanDeduper(options.cooldownMs ?? 2500);
+    this.stable = new StableReadFilter(options.confirmHits ?? 2, options.confirmWindowMs ?? 700);
     const context = this.canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error('Canvas 2D context is not available');
     this.context = context;
@@ -64,6 +75,7 @@ export class ScanSession {
   /** Resumes decoding. Pass `forgetLast` to allow the previous code to be read again at once. */
   resume(forgetLast = false): void {
     if (forgetLast) this.deduper.reset();
+    this.stable.reset();
     this.paused = false;
     this.resumedAt = performance.now();
   }
@@ -119,13 +131,17 @@ export class ScanSession {
     const frame = this.context.getImageData(0, 0, out.width, out.height);
     const decodeStart = performance.now();
 
-    const code = await engine.decode(frame);
+    const codes = await engine.decode(frame);
     const now = performance.now();
     // The worker engine measures pure decoder time; the round trip adds transfer overhead.
     const decodeMs = engine instanceof ZxingWorkerEngine ? engine.lastDecodeMs : now - decodeStart;
     this.recordStats(decodeStart - grabStart, decodeMs, out, now);
 
-    if (!code || this.paused || !this.running) return;
+    if (this.paused || !this.running) return;
+    if (now - this.resumedAt < (this.options.rearmDelayMs ?? 0)) return;
+    const code = pickCentralCode(codes, out, this.options.centerZone);
+    const confirmed = this.stable.push(code?.text ?? null, now);
+    if (!code || confirmed === null) return;
     if (!this.deduper.accept(code.text, now)) return;
     if (this.options.pauseOnScan ?? true) this.paused = true;
     this.options.onScan({

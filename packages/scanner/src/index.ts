@@ -2,6 +2,8 @@ export * from './types.js';
 export * from './dedupe.js';
 export * from './keyboard-wedge.js';
 export * from './crop.js';
+export * from './pick.js';
+export * from './stable-read.js';
 export * from './camera.js';
 export * from './engines.js';
 export * from './scan-session.js';

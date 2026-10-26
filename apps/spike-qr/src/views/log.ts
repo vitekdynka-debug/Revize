@@ -6,6 +6,7 @@ const MODE_LABELS: Record<InputMode, string> = {
   wedge: 'Bluetooth čtečka',
   manual: 'Systémová klávesnice',
   keypad: 'Číselník v aplikaci',
+  list: 'Výběr ze seznamu',
 };
 
 const fmt = (value: number | null) => (value === null ? '–' : `${(value / 1000).toFixed(2)} s`);

@@ -25,11 +25,30 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-export function download(filename: string, content: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([content], { type }));
+export function download(filename: string, content: string | Blob, type: string): void {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
   const link = h('a', { href: url, download: filename });
   document.body.append(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Hands a file to the user: the share sheet where available (iPad: "Uložit do Souborů", AirDrop,
+ * mail), otherwise a regular download.
+ */
+export async function saveFile(filename: string, content: string | Blob, type: string) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const file = new File([blob], filename, { type });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename });
+      return;
+    } catch (error) {
+      if ((error as DOMException).name === 'AbortError') return;
+    }
+  }
+  download(filename, blob, type);
 }

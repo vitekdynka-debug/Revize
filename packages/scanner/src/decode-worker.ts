@@ -12,7 +12,7 @@ prepareZXingModule({
 });
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
-let readerOptions: ReaderOptions = { formats: ['QRCode'], tryHarder: true, maxNumberOfSymbols: 1 };
+let readerOptions: ReaderOptions = { formats: ['QRCode'], tryHarder: true, maxNumberOfSymbols: 4 };
 
 const reply = (message: WorkerResponse) => scope.postMessage(message);
 
@@ -22,7 +22,7 @@ scope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     readerOptions = {
       formats: request.settings.formats as ReaderOptions['formats'],
       tryHarder: request.settings.tryHarder,
-      maxNumberOfSymbols: 1,
+      maxNumberOfSymbols: request.settings.maxSymbols ?? 4,
     };
     try {
       // Warm up: compiles the WASM module before the first real frame arrives.
@@ -41,13 +41,18 @@ scope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       request.width,
       request.height,
     );
-    const [first] = await readBarcodes(frame, readerOptions);
-    reply({
-      type: 'result',
-      id: request.id,
-      code: first?.isValid ? { text: first.text, format: first.format } : null,
-      ms: performance.now() - started,
-    });
+    const results = await readBarcodes(frame, readerOptions);
+    const codes = results
+      .filter((result) => result.isValid)
+      .map(({ text, format, position: p }) => ({
+        text,
+        format,
+        center: {
+          x: (p.topLeft.x + p.topRight.x + p.bottomRight.x + p.bottomLeft.x) / 4,
+          y: (p.topLeft.y + p.topRight.y + p.bottomRight.y + p.bottomLeft.y) / 4,
+        },
+      }));
+    reply({ type: 'result', id: request.id, codes, ms: performance.now() - started });
   } catch (error) {
     reply({ type: 'error', id: request.id, message: String(error) });
   }
