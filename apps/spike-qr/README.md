@@ -7,8 +7,9 @@ použije beze změny v `apps/web`.
 ## Co umí
 
 - **Kontrola:** zahájení, průběh „zkontrolováno X z Y“, seznam artiklů seřazený podle umístění
-  (nezkontrolované / zkontrolované / vše), ukončení se souhrnem a export **výsledků (CSV)**
-  a **fotek (ZIP** se soubory `číslo_01.jpg` a sidecar CSV). Výsledky i fotky se uloží do
+  (nezkontrolované / zkontrolované / vše), ukončení se souhrnem a export **tabulky (XLSX** s listy Výsledky a Souhrn, k tomu **CSV)**
+  a **fotek (ZIP** se soubory `číslo_01.jpg` a sidecar CSV). Export má dva kroky: Připravit,
+  potom Uložit / sdílet, protože iOS otevře nabídku Sdílet jen přímo z ťuknutí. Výsledky i fotky se uloží do
   IndexedDB dřív, než se karta zavře, takže přežijí i zavření aplikace.
 - **Rychlá kontrola kamerou:** skener zůstává otevřený. Po načtení se ukáže karta s detailem
   artiklu (umístění, vlastní pole, poslední a příští kontrola) a s tlačítky **V pořádku /

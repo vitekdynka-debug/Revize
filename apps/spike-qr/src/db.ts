@@ -28,7 +28,19 @@ export interface PhotoRow {
   resultId: string;
   itemNumber: string;
   takenAt: string;
-  blob: Blob;
+  /**
+   * JPEG bytes. Stored as ArrayBuffer, not Blob: WebKit (iOS) intermittently fails to persist
+   * Blobs in IndexedDB, especially in home-screen apps.
+   */
+  data: ArrayBuffer;
+  type: string;
+  /** Legacy rows from spike v2 (Blob). */
+  blob?: Blob;
+}
+
+export async function photoBytes(photo: PhotoRow): Promise<Uint8Array> {
+  if (photo.data) return new Uint8Array(photo.data);
+  return new Uint8Array(await photo.blob!.arrayBuffer());
 }
 
 /** Local field data. In the real app the same rows feed the outbox (ADR-0004). */
@@ -44,6 +56,8 @@ class SpikeDb extends Dexie {
       results: 'id, inspectionId, itemNumber',
       photos: 'id, inspectionId, resultId',
     });
+    // v2: photos as ArrayBuffer (same indexes; old Blob rows stay readable).
+    this.version(2).stores({});
   }
 }
 

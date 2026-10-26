@@ -580,3 +580,31 @@ h2 {
     break-inside: avoid;
   }
 }
+
+/* Export files */
+.file-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0b1222;
+}
+.file-name {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.file-name small {
+  color: var(--muted);
+}

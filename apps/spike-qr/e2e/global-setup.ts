@@ -14,6 +14,9 @@ export default async function globalSetup() {
   await QRCode.toFile(`${DIR}/R10002-small.png`, url('R10002'), { width: 140, margin: 2 });
   await QRCode.toFile(`${DIR}/R10001-small.png`, url('R10001'), { width: 140, margin: 2 });
 
+  // A "defect photo" for the photo upload tests.
+  ffmpeg(['-i', `${DIR}/R10001.png`, '-vf', 'scale=1600:1200', `${DIR}/defect.jpg`]);
+
   // One label inside the centered scan area, on a grey background.
   ffmpeg([
     '-loop',

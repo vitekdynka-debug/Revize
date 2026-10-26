@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
-import { db, type InspectionRow, type ResultRow } from './db.js';
+import { db, photoBytes, type InspectionRow, type ResultRow } from './db.js';
 import type { InputMode } from './log.js';
 import {
   MOCK_CUSTOMER,
@@ -8,6 +8,7 @@ import {
   itemByNumber,
   locationLabel,
 } from './mock-items.js';
+import { buildXlsx, type CellValue } from './xlsx.js';
 
 export async function activeInspection(): Promise<InspectionRow | null> {
   return (await db.inspections.where('status').equals('open').first()) ?? null;
@@ -49,6 +50,13 @@ export async function saveResult(
 ): Promise<void> {
   const id = `${inspectionId}:${itemNumber}`;
   const now = new Date().toISOString();
+  // Read the bytes before the transaction: awaiting non-IndexedDB work inside it would commit it.
+  const photos = await Promise.all(
+    input.photos.map(async (blob) => ({
+      data: await blob.arrayBuffer(),
+      type: blob.type || 'image/jpeg',
+    })),
+  );
   await db.transaction('rw', db.results, db.photos, async () => {
     await db.results.put({
       id,
@@ -63,16 +71,21 @@ export async function saveResult(
     // A changed result replaces the photos of the previous one.
     await db.photos.where('resultId').equals(id).delete();
     await db.photos.bulkAdd(
-      input.photos.map((blob) => ({
+      photos.map((photo) => ({
         id: crypto.randomUUID(),
         inspectionId,
         resultId: id,
         itemNumber,
         takenAt: now,
-        blob,
+        ...photo,
       })),
     );
   });
+  // Field data must not get lost silently: verify that every photo is really stored.
+  const stored = await db.photos.where('resultId').equals(id).count();
+  if (stored !== photos.length) {
+    throw new Error(`Uloženo ${stored} z ${photos.length} fotek`);
+  }
 }
 
 export async function resultsOf(inspectionId: string): Promise<Map<string, ResultRow>> {
@@ -147,46 +160,85 @@ function csv(rows: (string | number)[][]): string {
 
 const formatTime = (iso: string) => new Date(iso).toLocaleString('cs-CZ');
 
-/** Results of all items (checked or not), sorted by location. */
-export async function resultsCsv(inspection: InspectionRow): Promise<string> {
+const MODE_LABEL: Record<InputMode, string> = {
+  camera: 'Kamera (QR)',
+  wedge: 'Čtečka',
+  manual: 'Klávesnice',
+  keypad: 'Číselník',
+  list: 'Seznam',
+};
+
+const RESULT_HEADER = [
+  'Číslo artiklu',
+  'Typ',
+  'Umístění',
+  'Výsledek',
+  'Popis závady',
+  'Vyřazeno z provozu',
+  'Čas kontroly',
+  'Způsob zadání',
+  'Počet fotek',
+];
+const RESULT_WIDTHS = [13, 10, 32, 16, 45, 18, 20, 14, 12];
+
+/** Results of all items (checked or not), sorted by location – one row per item. */
+async function resultRows(inspection: InspectionRow): Promise<CellValue[][]> {
   const results = await resultsOf(inspection.id);
   const photos = await db.photos.where('inspectionId').equals(inspection.id).toArray();
   const photoCounts = new Map<string, number>();
   photos.forEach((p) => photoCounts.set(p.itemNumber, (photoCounts.get(p.itemNumber) ?? 0) + 1));
 
-  const header = [
-    'Číslo artiklu',
-    'Typ',
-    'Umístění',
-    'Výsledek',
-    'Popis závady',
-    'Vyřazeno z provozu',
-    'Čas kontroly',
-    'Způsob zadání',
-    'Počet fotek',
-  ];
-  const rows = [...MOCK_ITEMS].sort(compareByLocation).map((item) => {
+  return [...MOCK_ITEMS].sort(compareByLocation).map((item) => {
     const r = results.get(item.itemNumber);
     return [
-      item.itemNumber,
+      Number(item.itemNumber),
       item.type,
       locationLabel(item),
       r ? OUTCOME_LABEL[r.outcome] : 'Nezkontrolováno',
       r?.defectDescription ?? '',
       r?.outOfService ? 'ano' : r ? 'ne' : '',
       r ? formatTime(r.recordedAt) : '',
-      r?.mode ?? '',
+      r ? MODE_LABEL[r.mode] : '',
       photoCounts.get(item.itemNumber) ?? 0,
     ];
   });
-  const meta = [
-    ['Zákazník', inspection.customer],
-    ['Provozovna', inspection.site],
-    ['Zahájeno', formatTime(inspection.startedAt)],
-    ['Ukončeno', inspection.finishedAt ? formatTime(inspection.finishedAt) : 'rozpracovaná'],
-    [],
-  ];
-  return csv([...meta, header, ...rows]);
+}
+
+/** CSV is a plain table (no title rows), so spreadsheet apps detect the columns. */
+export async function resultsCsv(inspection: InspectionRow): Promise<string> {
+  return csv(
+    [RESULT_HEADER, ...(await resultRows(inspection))].map((row) => row.map((v) => v ?? '')),
+  );
+}
+
+export async function resultsXlsx(inspection: InspectionRow): Promise<Uint8Array> {
+  const s = await summarize(inspection.id);
+  return buildXlsx([
+    {
+      name: 'Výsledky',
+      header: true,
+      widths: RESULT_WIDTHS,
+      rows: [RESULT_HEADER, ...(await resultRows(inspection))],
+    },
+    {
+      name: 'Souhrn',
+      widths: [22, 40],
+      rows: [
+        ['Zákazník', inspection.customer],
+        ['Provozovna', inspection.site],
+        ['Zahájeno', formatTime(inspection.startedAt)],
+        ['Ukončeno', inspection.finishedAt ? formatTime(inspection.finishedAt) : 'rozpracovaná'],
+        [],
+        ['Artiklů celkem', s.total],
+        ['Zkontrolováno', s.checked],
+        ['V pořádku', s.ok],
+        ['Závady', s.defect],
+        ['z toho vyřazeno z provozu', s.outOfService],
+        ['Nezkontrolováno', s.unchecked],
+        ['Fotek', s.photos],
+      ],
+    },
+  ]);
 }
 
 /** ZIP with defect photos named `<item>_<nn>.jpg` and a sidecar CSV describing them. */
@@ -215,7 +267,7 @@ export async function photosZip(inspection: InspectionRow): Promise<Blob> {
     const index = (perItem.get(photo.itemNumber) ?? 0) + 1;
     perItem.set(photo.itemNumber, index);
     const name = `${photo.itemNumber}_${String(index).padStart(2, '0')}.jpg`;
-    files[name] = new Uint8Array(await photo.blob.arrayBuffer());
+    files[name] = await photoBytes(photo);
     const item = itemByNumber(photo.itemNumber);
     const result = results.get(photo.itemNumber);
     sidecar.push([

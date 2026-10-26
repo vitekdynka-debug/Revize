@@ -45,6 +45,19 @@ Po každém bloku si poznamenejte dojmy. Čísla se ukládají sama do _Měřen�
 | R5  | Celá kontrola    | _Zahájit kontrolu_, část artiklů skenem, část ze _Seznamu_, jednu závadu s fotkami a vyřazením, pak zavřete aplikaci (swipe), znovu otevřete a zkontrolujte, že nic nezmizelo. _Ukončit kontrolu → Výsledky (CSV) a Fotky (ZIP)_ → Uložit do Souborů. | Data po restartu, obsah CSV/ZIP v aplikaci Soubory, otevření CSV v Excelu |
 | R6  | Oprávnění kamery | Zkuste _Nastavení iPadu → Aplikace → Safari → Kamera → Povolit_ a znovu T2.                                                                                                                                                                           | Ptá se pořád? (pokud ano, je to omezení PWA, viz ADR-0009)                |
 
+## Kolo 3 (po úpravách fotek a exportu)
+
+Před testem: na úvodní obrazovce dole **„Aktualizovat aplikaci“**. Verze musí být z 26. 10. 2026
+nebo novější.
+
+| #   | Test              | Jak                                                                                             | Co sledovat                                                                              |
+| --- | ----------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| F1  | Fotky             | Závada → _Vyfotit závadu_ (2–3 fotky) a hned _Uložit závadu_. Potom artikl otevřete znovu.      | Karta ukazuje „(N foto)“? Po vyfocení se tlačítko krátce přepne na „Zpracovávám fotku…“. |
+| F2  | Fotky po restartu | Zavřete aplikaci (swipe), otevřete a zkontrolujte totéž.                                        | Počet fotek sedí.                                                                        |
+| F3  | Export            | _Ukončit kontrolu → Připravit export_. U každého souboru _Uložit / sdílet → Uložit do Souborů_. | V Souborech je .xlsx, .csv a -fotky.zip.                                                 |
+| F4  | Tabulka           | Otevřete .xlsx v Numbers nebo Excelu.                                                           | Sloupce, zamčené záhlaví, filtr, list Souhrn.                                            |
+| F5  | Fotky v ZIP       | Rozbalte ZIP v Souborech.                                                                       | `10005_01.jpg`… a `fotky.csv`                                                            |
+
 ## Výstup
 
 _Měření → Sdílet CSV_ (nebo _Stáhnout CSV_) a soubor mi pošlete spolu s poznámkami:

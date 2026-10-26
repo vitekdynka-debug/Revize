@@ -35,20 +35,25 @@ export function download(filename: string, content: string | Blob, type: string)
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/**
- * Hands a file to the user: the share sheet where available (iPad: "Uložit do Souborů", AirDrop,
- * mail), otherwise a regular download.
- */
-export async function saveFile(filename: string, content: string | Blob, type: string) {
-  const blob = content instanceof Blob ? content : new Blob([content], { type });
-  const file = new File([blob], filename, { type });
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: filename });
-      return;
-    } catch (error) {
-      if ((error as DOMException).name === 'AbortError') return;
-    }
+export function canShareFiles(files: File[]): boolean {
+  try {
+    return navigator.canShare?.({ files }) ?? false;
+  } catch {
+    return false;
   }
-  download(filename, blob, type);
+}
+
+/**
+ * Opens the share sheet (iPad: "Uložit do Souborů", AirDrop, mail). Must be called directly
+ * from a tap: iOS rejects share() once the user gesture expired, e.g. after awaiting a database
+ * read. Returns false when sharing is not possible or was rejected (not when cancelled).
+ */
+export async function shareFiles(files: File[], title: string): Promise<boolean> {
+  if (!canShareFiles(files)) return false;
+  try {
+    await navigator.share({ files, title });
+    return true;
+  } catch (error) {
+    return (error as DOMException).name === 'AbortError';
+  }
 }

@@ -1,5 +1,5 @@
 import type { InspectionRow } from '../db.js';
-import { h, saveFile } from '../dom.js';
+import { canShareFiles, h, shareFiles } from '../dom.js';
 import {
   activeInspection,
   closedInspections,
@@ -7,27 +7,98 @@ import {
   exportBaseName,
   photosZip,
   resultsCsv,
+  resultsXlsx,
   summarize,
 } from '../inspection.js';
+import { XLSX_MIME } from '../xlsx.js';
 import { progressBar, summaryLine } from './inspection.js';
 
-/** Finished (and the running) inspections with CSV and photo ZIP export. */
+const formatSize = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} kB`
+    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+async function buildFiles(inspection: InspectionRow, photoCount: number): Promise<File[]> {
+  const base = exportBaseName(inspection);
+  const files = [
+    new File([(await resultsXlsx(inspection)) as BlobPart], `${base}.xlsx`, { type: XLSX_MIME }),
+    new File([await resultsCsv(inspection)], `${base}.csv`, { type: 'text/csv' }),
+  ];
+  if (photoCount > 0) {
+    files.push(
+      new File([await photosZip(inspection)], `${base}-fotky.zip`, { type: 'application/zip' }),
+    );
+  }
+  return files;
+}
+
+/**
+ * Finished (and the running) inspections with export. Two steps on purpose: "Připravit export"
+ * builds the files, then each "Uložit / sdílet" tap opens the share sheet directly – iOS only
+ * allows that inside a fresh tap. Download links stay valid while the page is open.
+ */
 export function exportsView(root: HTMLElement): () => void {
   let disposed = false;
+  const objectUrls: string[] = [];
+
+  const fileRow = (file: File) => {
+    const url = URL.createObjectURL(file);
+    objectUrls.push(url);
+    const status = h('span', { class: 'muted small' });
+    return h(
+      'li',
+      { class: 'file-row' },
+      h(
+        'span',
+        { class: 'file-name' },
+        h('strong', {}, file.name),
+        h('small', {}, formatSize(file.size)),
+      ),
+      canShareFiles([file]) &&
+        h(
+          'button',
+          {
+            class: 'btn btn-accent',
+            onclick: async () => {
+              if (!(await shareFiles([file], file.name)))
+                status.textContent = 'Sdílení nejde – použijte Stáhnout.';
+            },
+          },
+          'Uložit / sdílet',
+        ),
+      h('a', { class: 'btn', href: url, download: file.name }, 'Stáhnout'),
+      status,
+    );
+  };
 
   const card = async (inspection: InspectionRow) => {
     const summary = await summarize(inspection.id);
-    const base = exportBaseName(inspection);
+    const output = h('div', {});
     const status = h('p', { class: 'muted small' });
-    const run = async (label: string, task: () => Promise<void>) => {
-      status.textContent = `${label}…`;
+    const prepare = h('button', { class: 'btn btn-accent' }, 'Připravit export');
+    prepare.onclick = async () => {
+      prepare.disabled = true;
+      status.textContent = 'Připravuji soubory…';
       try {
-        await task();
+        const files = await buildFiles(inspection, summary.photos);
         status.textContent = '';
+        output.replaceChildren(
+          h('ul', { class: 'file-list' }, ...files.map(fileRow)),
+          files.length > 1 && canShareFiles(files)
+            ? h(
+                'button',
+                { class: 'btn', onclick: () => void shareFiles(files, exportBaseName(inspection)) },
+                'Uložit / sdílet vše najednou',
+              )
+            : '',
+        );
       } catch (error) {
-        status.textContent = `Chyba: ${String(error)}`;
+        status.textContent = `Export se nepodařil: ${String(error)}`;
+      } finally {
+        prepare.disabled = false;
       }
     };
+
     return h(
       'section',
       { class: 'panel' },
@@ -43,29 +114,7 @@ export function exportsView(root: HTMLElement): () => void {
       h(
         'div',
         { class: 'row' },
-        h(
-          'button',
-          {
-            class: 'btn',
-            onclick: () =>
-              void run('Připravuji CSV', async () =>
-                saveFile(`${base}.csv`, await resultsCsv(inspection), 'text/csv'),
-              ),
-          },
-          'Výsledky (CSV)',
-        ),
-        h(
-          'button',
-          {
-            class: 'btn',
-            disabled: summary.photos === 0,
-            onclick: () =>
-              void run('Balím fotky', async () =>
-                saveFile(`${base}-fotky.zip`, await photosZip(inspection), 'application/zip'),
-              ),
-          },
-          'Fotky (ZIP)',
-        ),
+        prepare,
         inspection.status === 'closed' &&
           h(
             'button',
@@ -81,6 +130,7 @@ export function exportsView(root: HTMLElement): () => void {
           ),
       ),
       status,
+      output,
     );
   };
 
@@ -98,7 +148,8 @@ export function exportsView(root: HTMLElement): () => void {
         h(
           'p',
           { class: 'muted' },
-          'Data jsou uložená v iPadu (IndexedDB). Export otevře nabídku Sdílet – zvolte „Uložit do Souborů“, AirDrop nebo e‑mail.',
+          'Data jsou uložená v iPadu. Export: „Připravit export“, potom „Uložit / sdílet“ → Uložit do Souborů, AirDrop nebo e‑mail. ' +
+            'Tabulka .xlsx se otevře v Excelu i v Numbers rovnou po sloupcích.',
         ),
         ...(cards.length ? cards : [h('p', {}, 'Zatím žádná kontrola.')]),
       ),
@@ -108,5 +159,6 @@ export function exportsView(root: HTMLElement): () => void {
   void render();
   return () => {
     disposed = true;
+    objectUrls.forEach((url) => URL.revokeObjectURL(url));
   };
 }

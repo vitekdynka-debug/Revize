@@ -168,35 +168,55 @@ export function showItemCard(options: ItemCardOptions): Promise<Decision | null>
       outOfService.checked = existing?.outOfService ?? false;
       const thumbs = h('div', { class: 'thumbs' });
       const photoButton = h('button', { class: 'btn btn-neutral' }, 'Vyfotit závadu');
+      const saveButton = h('button', { class: 'btn btn-defect' }, 'Uložit závadu');
       const photoInput = h('input', {
         type: 'file',
         accept: 'image/*',
         capture: 'environment',
         class: 'hidden',
       });
-      photoInput.onchange = async () => {
+      // Photos are compressed asynchronously; saving waits for it (a quick tap on "Uložit"
+      // right after taking a photo used to save the defect without the photo).
+      let processing: Promise<void> = Promise.resolve();
+      let pending = 0;
+      const refreshButtons = () => {
+        photoButton.textContent = photos.length
+          ? `Vyfotit další (${photos.length})`
+          : 'Vyfotit závadu';
+        saveButton.disabled = pending > 0;
+        saveButton.textContent = pending > 0 ? 'Zpracovávám fotku…' : 'Uložit závadu';
+      };
+      photoInput.onchange = () => {
         const files = [...(photoInput.files ?? [])];
         photoInput.value = '';
-        photoButton.disabled = true;
-        for (const file of files) {
-          const blob = await compressPhoto(file);
-          photos.push(blob);
-          const url = URL.createObjectURL(blob);
-          objectUrls.push(url);
-          thumbs.append(h('img', { src: url, alt: `Foto ${photos.length}` }));
-        }
-        photoButton.textContent = `Vyfotit další (${photos.length})`;
-        photoButton.disabled = false;
+        pending += files.length;
+        refreshButtons();
+        processing = processing.then(async () => {
+          for (const file of files) {
+            try {
+              const blob = await compressPhoto(file);
+              photos.push(blob);
+              const url = URL.createObjectURL(blob);
+              objectUrls.push(url);
+              thumbs.append(h('img', { src: url, alt: `Foto ${photos.length}` }));
+            } catch (e) {
+              error.textContent = `Fotku se nepodařilo zpracovat: ${String(e)}`;
+            } finally {
+              pending -= 1;
+              refreshButtons();
+            }
+          }
+        });
       };
       photoButton.onclick = () => photoInput.click();
 
-      const saveButton = h('button', { class: 'btn btn-defect' }, 'Uložit závadu');
       const backButton = h(
         'button',
         { class: 'btn btn-cancel', onclick: () => showDetail(it) },
         'Zpět',
       );
-      saveButton.onclick = () => {
+      saveButton.onclick = async () => {
+        await processing;
         if (description.value.trim() === '') {
           error.textContent = 'Napište popis závady.';
           description.focus();
