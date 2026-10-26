@@ -1,0 +1,19 @@
+{
+  "name": "@revize/scanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./decode-worker": "./src/decode-worker.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zxing-wasm": "^3.1.6"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}

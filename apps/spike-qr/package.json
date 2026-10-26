@@ -1,0 +1,28 @@
+{
+  "name": "@revize/spike-qr",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc -p tsconfig.json",
+    "icons": "node scripts/make-icons.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@revize/scanner": "workspace:*",
+    "@revize/shared": "workspace:*",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "sharp": "^0.35.5",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-build": "^7.4.1",
+    "workbox-window": "^7.4.1"
+  }
+}
