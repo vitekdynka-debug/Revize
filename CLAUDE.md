@@ -66,7 +66,7 @@ pnpm lint
 pnpm run check:licenses   # dependency license policy (docs/licenses.md)
 pnpm spike:dev        # QR spike dev server (camera needs localhost or HTTPS, see apps/spike-qr/README.md)
 pnpm spike:build      # static build into apps/spike-qr/dist
-pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a QR video (needs ffmpeg)
+pnpm --filter @revize/spike-qr e2e   # Playwright, fake camera feeding a generated QR video
 docker compose up -d --build         # whole system (needs .env)
 pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a running stack
 ```

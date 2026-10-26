@@ -43,7 +43,7 @@ použije beze změny v `apps/web`.
 pnpm install
 pnpm spike:dev                     # http://localhost:5173 (kamera jen na localhost nebo přes HTTPS)
 pnpm spike:build                   # statický build do apps/spike-qr/dist
-pnpm --filter @revize/spike-qr e2e # Playwright: falešná kamera s QR kódem, viewport iPadu (potřebuje ffmpeg)
+pnpm --filter @revize/spike-qr e2e # Playwright: falešná kamera s QR kódem, viewport iPadu
 ```
 
 ## Nasazení pro iPad
