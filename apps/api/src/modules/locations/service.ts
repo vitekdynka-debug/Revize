@@ -33,6 +33,36 @@ export function pathNamesOf(pathIds: string[], names: Map<string, string>): stri
   return pathIds.map((id) => names.get(id) ?? '?');
 }
 
+/** Inserts one location (with its materialized path) and audits it. */
+export async function insertLocation(
+  tx: DbOrTx,
+  auth: AuthContext,
+  siteId: string,
+  parent: LocationRow | null,
+  values: { id: string; name: string; sortOrder: number },
+) {
+  const path = locationPath(parent, values.id, values.sortOrder);
+  const [row] = await tx
+    .insert(location)
+    .values({
+      ...values,
+      siteId,
+      parentId: parent?.id ?? null,
+      organizationId: auth.organizationId,
+      ...path,
+    })
+    .returning();
+  await recordAudit(tx, {
+    organizationId: auth.organizationId,
+    actorUserId: auth.userId,
+    action: 'location.create',
+    entityType: 'location',
+    entityId: values.id,
+    after: row,
+  });
+  return row!;
+}
+
 export function createLocationsService(db: Db) {
   async function assertSite(tx: DbOrTx, auth: AuthContext, siteId: string) {
     const [row] = await tx
@@ -103,35 +133,6 @@ export function createLocationsService(db: Db) {
     }));
   }
 
-  async function insert(
-    tx: DbOrTx,
-    auth: AuthContext,
-    siteId: string,
-    parent: LocationRow | null,
-    values: { id: string; name: string; sortOrder: number },
-  ) {
-    const path = locationPath(parent, values.id, values.sortOrder);
-    const [row] = await tx
-      .insert(location)
-      .values({
-        ...values,
-        siteId,
-        parentId: parent?.id ?? null,
-        organizationId: auth.organizationId,
-        ...path,
-      })
-      .returning();
-    await recordAudit(tx, {
-      organizationId: auth.organizationId,
-      actorUserId: auth.userId,
-      action: 'location.create',
-      entityType: 'location',
-      entityId: values.id,
-      after: row,
-    });
-    return row!;
-  }
-
   return {
     /** All locations of a site in tree order (parents before children, siblings by sort order). */
     async list(auth: AuthContext, siteId: string, includeArchived = false): Promise<Location[]> {
@@ -164,7 +165,7 @@ export function createLocationsService(db: Db) {
         if (existing) return existing; // repeated request with the same client id
         const parent = await parentOf(tx, auth, siteId, input.parentId);
         const sortOrder = input.sortOrder ?? (await nextSortOrder(tx, siteId, input.parentId));
-        return insert(tx, auth, siteId, parent, { id, name: input.name, sortOrder });
+        return insertLocation(tx, auth, siteId, parent, { id, name: input.name, sortOrder });
       });
       return (await toDtos(db, [{ ...row, itemCount: 0 }]))[0]!;
     },
@@ -181,7 +182,9 @@ export function createLocationsService(db: Db) {
         const created: LocationRow[] = [];
         for (let n = input.from; n <= input.to; n++) {
           const name = input.prefix ? `${input.prefix} ${n}` : String(n);
-          created.push(await insert(tx, auth, siteId, parent, { id: newId(), name, sortOrder: n }));
+          created.push(
+            await insertLocation(tx, auth, siteId, parent, { id: newId(), name, sortOrder: n }),
+          );
         }
         return created;
       });

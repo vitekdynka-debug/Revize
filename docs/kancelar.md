@@ -1,4 +1,4 @@
-# Kancelář – návod k evidenci (M3)
+# Kancelář – návod k evidenci (M3, M4)
 
 Přihlášení na `https://<server>/` (účet administrátora z `.env`).
 
@@ -26,3 +26,19 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      z evidence.
 6. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
    uživatele okamžitě odhlásí ze všech zařízení.
+7. **Import (XLSX/CSV):**
+   - Zvolte zákazníka, provozovnu a typ vybavení. **Stáhnout šablonu** dá XLSX se správnými
+     sloupci, číselníky jako rozbalovací seznam a listem _Nápověda_.
+   - Nahrajte soubor (XLSX nebo CSV do 10 MB a 20 000 řádků). CSV může být v UTF-8 i ve
+     Windows-1250 a oddělovač (`;`, `,`, tabulátor) se pozná sám. Starý formát `.xls` uložte
+     v Excelu jako `.xlsx`.
+   - **Mapování:** ke každému poli vyberte sloupec, vedle uvidíte ukázku hodnot. Systém navrhne
+     sloupce podle záhlaví a pro daný typ si pamatuje poslední použité mapování. Umístění může
+     být ve více sloupcích (Hala, Řada, Pozice) nebo v jednom s oddělovačem (`Hala A / Řada 1`).
+   - **Režim:** _Jen nové artikly_ (existující číslo je chyba), nebo _Nové i aktualizovat
+     existující_. Při aktualizaci prázdná buňka hodnotu artiklu nemaže.
+   - **Kontrola:** ukáže, co se založí, aktualizuje a které řádky mají chybu a proč. Do databáze
+     se zatím nic nezapsalo. Chyby opravte v souboru, nebo zaškrtněte _Přeskočit řádky s chybami_.
+   - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící
+     umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
+     v auditu.

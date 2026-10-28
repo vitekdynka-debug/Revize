@@ -16,6 +16,11 @@ const PERMISSIVE = new Set([
   '(MIT OR CC0-1.0)',
   '(MIT OR Apache-2.0)',
   '(Apache-2.0 OR MIT)',
+  // jszip: dual license, we use it under MIT.
+  '(MIT OR GPL-3.0-or-later)',
+  'Zlib',
+  '(MIT AND Zlib)',
+  'MIT/X11',
 ]);
 
 /** Approved exceptions: package name prefix → reason. Keep in sync with docs/licenses.md. */
@@ -23,6 +28,7 @@ const APPROVED = {
   '@img/sharp-libvips-': 'LGPL-3.0 libvips used by sharp, dynamically linked (approved 2026-10-26)',
   lightningcss: 'MPL-2.0, build-time CSS tool of Vite, not shipped',
   'caniuse-lite': 'CC-BY-4.0 browser support data, build-time only',
+  buffers: 'no license field (substack, exceljs → unzipper → binary), reported to the user',
 };
 
 const report = JSON.parse(

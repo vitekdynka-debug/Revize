@@ -54,6 +54,40 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
   return data as T;
 }
 
+/** Multipart upload of one file (plus text fields); same error handling as JSON requests. */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fields: Record<string, string> = {},
+): Promise<T> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  form.append('file', file, file.name);
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: form,
+    });
+  } catch {
+    throw new ApiRequestError(0, {
+      error: 'network',
+      message: 'Server není dostupný. Zkontrolujte připojení.',
+    });
+  }
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiRequestError(
+      response.status,
+      data && typeof data === 'object' && 'error' in data
+        ? (data as ApiError)
+        : { error: `http_${response.status}`, message: `Chyba serveru (${response.status}).` },
+    );
+  }
+  return data as T;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),

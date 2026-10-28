@@ -47,7 +47,7 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
     selects have the `combobox` role.
 - `deploy/` – Caddyfile and the web image (office app at `/`, QR spike at `/spike/`, proxies `/api`).
 - `docker-compose.yml` + `.env.example` – db, api, web; `scripts/smoke-test.sh` checks a running stack.
-- `docs/` – `architecture.md`, `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
+- `docs/` – `architecture.md`, `kancelar.md` (office guide), `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
 
 ## Architecture rules
 
@@ -101,4 +101,7 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   users, audit, OpenAPI, FileStorage (local disk), Docker Compose stack, demo seed.
 - M3 master data – done: API (customers, sites, location tree, equipment types incl. standards
   library, items with bulk updates) and office UI; item numbers 1–8 digits (ADR-0012).
-- Next: M4 import XLSX/CSV.
+- M4 import – done: upload (XLSX via exceljs, CSV via papaparse with UTF-8/cp1250 and delimiter
+  detection) → mapping (suggested from headers, remembered per type) → dry-run report per row →
+  commit in one transaction (ADR-0014). Row conversion/validation lives in `packages/shared/src/import`.
+- Next: M5 field mode online (needs remote-access decision and spike round 2 results).

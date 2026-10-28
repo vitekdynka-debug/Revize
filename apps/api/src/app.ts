@@ -1,4 +1,5 @@
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -24,6 +25,8 @@ import { createCustomersService } from './modules/customers/service.js';
 import { equipmentTypesRoutes } from './modules/equipment-types/routes.js';
 import { createEquipmentTypesService } from './modules/equipment-types/service.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { importsRoutes } from './modules/imports/routes.js';
+import { createImportsService } from './modules/imports/service.js';
 import { itemsRoutes } from './modules/items/routes.js';
 import { createItemsService } from './modules/items/service.js';
 import { locationsRoutes } from './modules/locations/routes.js';
@@ -83,6 +86,7 @@ export async function buildApp({ config, db, logger }: AppDeps) {
   });
 
   await app.register(cookie);
+  await app.register(multipart, { limits: { files: 1, fields: 5 } });
   await app.register(rateLimit, { global: false });
   await app.register(swagger, {
     openapi: {
@@ -118,6 +122,7 @@ export async function buildApp({ config, db, logger }: AppDeps) {
       await api.register(locationsRoutes, { locations: createLocationsService(db) });
       await api.register(equipmentTypesRoutes, { types: createEquipmentTypesService(db) });
       await api.register(itemsRoutes, { items: createItemsService(db) });
+      await api.register(importsRoutes, { imports: createImportsService(db), db });
     },
     { prefix: '/api' },
   );

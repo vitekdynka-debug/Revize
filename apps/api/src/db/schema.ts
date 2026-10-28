@@ -377,3 +377,48 @@ export const auditLog = pgTable(
     index('audit_log_org_created_idx').on(t.organizationId, t.createdAt),
   ],
 );
+
+/**
+ * An uploaded spreadsheet waiting for mapping, validation and commit (M4). The parsed rows are
+ * kept here, so validation can be repeated with different mappings without uploading again.
+ */
+export const importJob = pgTable(
+  'import_job',
+  {
+    id: uuid('id').primaryKey(),
+    organizationId: tenant(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => appUser.id),
+    fileName: text('file_name').notNull(),
+    sheetName: text('sheet_name'),
+    /** 1-based spreadsheet row of the header; data rows follow it. */
+    headerRow: integer('header_row').notNull(),
+    headers: jsonb('headers').$type<string[]>().notNull(),
+    /** Cells as parsed (string, number, boolean, null; dates as ISO date strings). */
+    rows: jsonb('rows').$type<(string | number | boolean | null)[][]>().notNull(),
+    status: text('status').notNull().default('uploaded'),
+    mapping: jsonb('mapping'),
+    result: jsonb('result'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    committedAt: timestamp('committed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('import_job_org_created_idx').on(t.organizationId, t.createdAt),
+    check('import_job_status_check', sql`${t.status} in ('uploaded', 'committed')`),
+  ],
+);
+
+/** Last used column mapping per equipment type (by header names), offered for the next file. */
+export const importMapping = pgTable(
+  'import_mapping',
+  {
+    organizationId: tenant(),
+    equipmentTypeId: uuid('equipment_type_id')
+      .notNull()
+      .references(() => equipmentType.id),
+    headers: jsonb('headers').$type<Record<string, string | string[] | undefined>>().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.organizationId, t.equipmentTypeId] })],
+);

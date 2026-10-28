@@ -12,6 +12,7 @@ import { useDisclosure } from '@mantine/hooks';
 import {
   IconBuildingWarehouse,
   IconChevronDown,
+  IconFileImport,
   IconLadder,
   IconListDetails,
   IconLogout,
@@ -30,6 +31,7 @@ const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permi
     permission: 'customer.read',
   },
   { to: '/artikly', label: 'Artikly', icon: IconListDetails, permission: 'item.read' },
+  { to: '/import', label: 'Import', icon: IconFileImport, permission: 'item.import' },
   { to: '/typy', label: 'Typy vybavení', icon: IconLadder, permission: 'equipmentType.read' },
   { to: '/uzivatele', label: 'Uživatelé', icon: IconUsers, permission: 'user.manage' },
 ];

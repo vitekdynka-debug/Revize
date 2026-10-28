@@ -2,6 +2,7 @@ export * from './api/index.js';
 export * from './equipment-fields.js';
 export * from './equipment-presets.js';
 export * from './ids.js';
+export * from './import/index.js';
 export * from './item-number.js';
 export * from './locale.js';
 export * from './location-path.js';

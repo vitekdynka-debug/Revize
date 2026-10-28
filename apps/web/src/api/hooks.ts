@@ -2,8 +2,13 @@ import type {
   CurrentUser,
   Customer,
   EquipmentType,
+  ImportJob,
+  ImportMappingInput,
+  ImportReport,
+  ImportResult,
   Item,
   ItemStatus,
+  importSuggestionSchema,
   Location,
   Site,
   User,
@@ -26,7 +31,7 @@ import type {
 } from '@revize/shared';
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { z } from 'zod';
-import { ApiRequestError, api, queryString } from './client.js';
+import { ApiRequestError, api, queryString, uploadFile } from './client.js';
 
 type In<T extends z.ZodType> = z.input<T>;
 
@@ -251,4 +256,38 @@ export const useBulkUpdateItems = () =>
     (body: In<typeof bulkUpdateItemsSchema>) =>
       api.post<{ updated: number }>('/items/bulk-update', body),
     [['items'], ['locations']],
+  );
+
+// ---------- import ----------
+
+export const useUploadImport = () =>
+  useMutation<ImportJob, ApiRequestError, { file: File; sheet?: string }>({
+    mutationFn: ({ file, sheet }) =>
+      uploadFile<ImportJob>('/imports', file, sheet ? { sheet } : {}),
+  });
+export const useImportSuggestion = () =>
+  useMutation<
+    z.infer<typeof importSuggestionSchema>,
+    ApiRequestError,
+    { jobId: string; equipmentTypeId: string }
+  >({
+    mutationFn: ({ jobId, equipmentTypeId }) =>
+      api.get(`/imports/${jobId}/suggestion${queryString({ equipmentTypeId })}`),
+  });
+export const useValidateImport = () =>
+  useMutation<ImportReport, ApiRequestError, { jobId: string; mapping: ImportMappingInput }>({
+    mutationFn: ({ jobId, mapping }) => api.post(`/imports/${jobId}/validate`, { mapping }),
+  });
+export const useCommitImport = () =>
+  useApiMutation(
+    ({
+      jobId,
+      mapping,
+      skipErrors,
+    }: {
+      jobId: string;
+      mapping: ImportMappingInput;
+      skipErrors: boolean;
+    }) => api.post<ImportResult>(`/imports/${jobId}/commit`, { mapping, skipErrors }),
+    [['items'], ['locations'], ['customers'], ['sites'], ['equipment-types']],
   );

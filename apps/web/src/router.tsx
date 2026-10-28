@@ -13,6 +13,7 @@ import { CustomerPage } from './pages/CustomerPage.js';
 import { CustomersPage } from './pages/CustomersPage.js';
 import { EquipmentTypePage } from './pages/EquipmentTypePage.js';
 import { EquipmentTypesPage } from './pages/EquipmentTypesPage.js';
+import { ImportPage } from './pages/ImportPage.js';
 import { ItemsPage } from './pages/ItemsPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { SitePage } from './pages/SitePage.js';
@@ -82,6 +83,11 @@ export const itemsRoute = createRoute({
   validateSearch: itemsSearchSchema,
   component: ItemsPage,
 });
+const importRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/import',
+  component: ImportPage,
+});
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/uzivatele',
@@ -103,6 +109,7 @@ const routeTree = rootRoute.addChildren([
     typesRoute,
     typeRoute,
     itemsRoute,
+    importRoute,
     usersRoute,
     accountRoute,
   ]),

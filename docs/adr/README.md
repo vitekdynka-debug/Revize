@@ -18,3 +18,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0011](0011-inspection-model.md)               | Model kontroly a hodnocení výsledků                             | přijato                         |
 | [0012](0012-item-numbers.md)                   | Čísla artiklů: číselné řady 1–8 číslic, úvodní nuly bez významu | přijato                         |
 | [0013](0013-equipment-type-library.md)         | Knihovna typů vybavení podle norem                              | přijato                         |
+| [0014](0014-import.md)                         | Import artiklů z XLSX/CSV                                       | přijato                         |
