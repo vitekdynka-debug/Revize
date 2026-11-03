@@ -67,6 +67,26 @@ V `.env` nastavte:
   }
   ```
 
+### Varianta C – Dokploy
+
+Server spravovaný přes [Dokploy](https://dokploy.com) (veřejné porty drží jeho Traefik):
+
+1. V Dokploy založte aplikaci typu **Compose** z tohoto repozitáře se souborem
+   `docker-compose.dokploy.yml`.
+2. V proměnných prostředí nastavte:
+   - `POSTGRES_PASSWORD` (smí obsahovat libovolné znaky, API ho dostává zvlášť, ne v URL),
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ORG_NAME`,
+   - `TRUSTED_ORIGINS=https://revize.vase-domena.cz` (přesná adresa, bez lomítka na konci).
+3. Přidejte doménu pro službu `web`, port `80`, a zapněte HTTPS (Let's Encrypt). Porty na hostiteli
+   se nepublikují.
+4. Zálohovací skripty spouštějte v adresáři, kam Dokploy projekt nasadil:
+
+   ```sh
+   COMPOSE_FILE=docker-compose.dokploy.yml COMPOSE_PROJECT_NAME=<název v Dokploy> scripts/backup.sh /srv/zalohy/revize
+   ```
+
+Podrobnosti v angličtině jsou v `deploy/dokploy.md`.
+
 ### Spuštění a kontrola
 
 ```sh
