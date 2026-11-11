@@ -132,6 +132,14 @@ Vývoj jde do větve `main` (ukázka na GitHub Pages se aktualizuje sama). Na se
 git fetch origin && git push origin origin/main:produkce
 ```
 
+**Dokploy a sdílená síť:** kontejner `web` je kvůli Traefiku i ve sdílené síti
+`dokploy-network`, kde jsou služby ostatních aplikací. Kdyby se `web` ptal na obecné jméno `api`
+(nebo `api` na `db`), mohla by odpovědět jiná aplikace na serveru. Projeví se to náhodnými
+chybami 502 nebo přihlášením do cizí databáze. Proto `docker-compose.dokploy.yml` používá
+vnitřní jména `revize-api` a `revize-db`, která existují jen ve vlastní síti aplikace. Na serveru
+nenechávejte běžet dvě instance Revize (stará zkušební a nová) a v Dokploy můžete u aplikace
+zapnout i izolované nasazení.
+
 V Dokploy nastavte u aplikace větev `produkce`. Automatické nasazení po pushi může zůstat
 zapnuté, protože do `produkce` se nic nedostane samo.
 

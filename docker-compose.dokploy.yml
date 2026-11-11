@@ -1,5 +1,10 @@
 # Dokploy variant: Traefik owns public ports 80/443 and routes HTTPS to web:80.
 # Set required secrets and host-specific values in the Dokploy Compose environment.
+#
+# Internal traffic (web → api → db) uses aliases that exist only on this stack's own network
+# (revize-api, revize-db). web also joins the shared dokploy-network, where plain service names
+# like `api` or `db` of other stacks would answer as well (random 502s, logins against a foreign
+# database).
 name: revize
 
 services:
@@ -12,6 +17,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
     volumes:
       - db-data:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases: [revize-db]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U revize -d revize']
       interval: 5s
@@ -37,7 +45,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://revize@db:5432/revize
+      DATABASE_URL: postgres://revize@revize-db:5432/revize
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
       COOKIE_SECURE: 'true'
       ORG_NAME: ${ORG_NAME:-Revizní firma}
@@ -49,6 +57,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - files:/data/files
+    networks:
+      default:
+        aliases: [revize-api]
     deploy:
       resources:
         limits:
@@ -70,6 +81,7 @@ services:
         condition: service_healthy
     environment:
       SITE_ADDRESS: ':80'
+      API_UPSTREAM: 'revize-api:3000'
     networks:
       - default
       - dokploy-network
