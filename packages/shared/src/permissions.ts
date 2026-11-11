@@ -40,6 +40,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'equipmentType.read',
     'item.read',
     'item.write',
+    /** Technicians import the customer's records before the visit. */
+    'item.import',
     'inspection.read',
     'inspection.perform',
     'export.read',

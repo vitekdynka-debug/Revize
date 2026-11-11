@@ -328,7 +328,7 @@ describe('import', () => {
     });
   });
 
-  it('rejects unsupported files and needs the import permission', async () => {
+  it('rejects unsupported files; technicians may import', async () => {
     expect(errorCode(await upload('stary.xls', Buffer.from('x')))).toBe('invalid_file');
     await api('POST', '/api/users', {
       email: 't@test.cz',
@@ -337,7 +337,9 @@ describe('import', () => {
       password: 'technik-heslo-1',
     });
     const { token: inspector } = await ctx.login('t@test.cz', 'technik-heslo-1');
-    expect((await upload('a.csv', Buffer.from('a\n1'), inspector)).statusCode).toBe(403);
+    // Technicians import the customer's records before the visit (item.import).
+    const uploaded = await upload('a.csv', Buffer.from('a\n1'), inspector);
+    expect(uploaded.statusCode, uploaded.body).toBeLessThan(300);
   });
 });
 

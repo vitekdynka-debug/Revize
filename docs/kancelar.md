@@ -70,7 +70,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    výsledky kontrol, fotky (i smazané a přesunuté), typy vybavení, zákazníci, uživatelé
    i přihlášení. Filtry podle oblasti, uživatele a data, u změn je vidět původní a nová hodnota.
    Záznamy nejdou upravit ani smazat. Starší záznamy načte tlačítko _Načíst starší_.
-7. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
+7. **Uživatelé:** technici (role Technik) a další administrátoři. Technik provádí kontroly
+   v terénu, upravuje a zakládá artikly a smí **importovat** evidenci (menu Import). Reset hesla a deaktivace
    uživatele okamžitě odhlásí ze všech zařízení. **Smazat uživatele** (v jeho úpravě, s
    potvrzením) účet zruší: nepřihlásí se a zmizí ze seznamu. Jeho jméno zůstane u provedených
    kontrol a v auditu a e-mail jde použít pro nový účet. Vlastní účet ani posledního
