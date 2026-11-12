@@ -262,27 +262,33 @@ export function displayFields(
 }
 
 /**
- * How an item's type reads in lists: the value of the type's first select field that tells the
- * kind ("Typ regálu" = "Paletový") before the type name → "Paletový regál". Types merged into one
- * (ADR-0018 racks, `planTypeMerge`) keep the kind in such a field; without one, the type name.
+ * How an item's type reads in lists: what tells the kind of the item before the type name →
+ * "Příruční regál", "Paletový regál", "Opěrný žebřík". The kind is the item's "typové
+ * označení" (a field labelled so, e.g. "Systém / typové označení"), else the value of the type's
+ * first select field that tells the kind ("Typ regálu", "Druh"); without one, the type name.
  */
 export function itemTypeLabel(
   type: { name: string; fieldDefinitions: readonly FieldDefinition[] } | undefined,
   values: Record<string, unknown>,
 ): string {
   if (!type) return '?';
-  const kindField = type.fieldDefinitions
-    .filter((f) => !f.archived && f.kind === 'select' && /^(typ|druh)\b/i.test(f.label))
-    .sort((a, b) => a.order - b.order)[0];
-  const kind = kindField ? values[kindField.key] : null;
-  if (typeof kind !== 'string' || !kind.trim()) return type.name;
+  const active = type.fieldDefinitions.filter((f) => !f.archived).sort((a, b) => a.order - b.order);
+  const valueOf = (field: FieldDefinition | undefined) => {
+    const value = field ? values[field.key] : null;
+    return typeof value === 'string' ? value.trim() : '';
+  };
+  const kind =
+    valueOf(active.find((f) => /typov[éeý]\s+označení/i.test(f.label))) ||
+    valueOf(active.find((f) => f.kind === 'select' && /^(typ|druh)\b/i.test(f.label)));
+  if (!kind) return type.name;
   const name = type.name.trim();
-  const lowerKind = kind.trim().toLocaleLowerCase('cs');
+  const lowerKind = kind.toLocaleLowerCase('cs');
   const lowerName = name.toLocaleLowerCase('cs');
+  const capitalized = kind.charAt(0).toLocaleUpperCase('cs') + kind.slice(1);
   // "Paletový" + "Regál" → "Paletový regál"; a name already containing the kind stays as it is,
   // a kind already containing the name ("Policový regál" from an older merge) too.
   if (lowerName.includes(lowerKind)) return name;
-  if (lowerKind.includes(lowerName)) return kind.trim();
+  if (lowerKind.includes(lowerName)) return capitalized;
   const rest = name.charAt(0).toLocaleLowerCase('cs') + name.slice(1);
-  return `${kind.trim()} ${rest}`;
+  return `${capitalized} ${rest}`;
 }

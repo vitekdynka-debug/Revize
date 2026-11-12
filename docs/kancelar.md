@@ -47,8 +47,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Hromadné úpravy** vybraných artiklů: přesun, stav, příští kontrola, vyřazení a **Nastavit
      údaj…** (např. _Typ regálu_ = Paletový u všech vybraných regálů). Nabízí údaje, které mají
      všechny vybrané artikly; _Jen u artiklů, kde údaj chybí_ nepřepíše vyplněné hodnoty.
-   - V seznamu je u artiklu druh a typ, např. _Paletový regál_: hodnota pole _Typ regálu_ (u
-     žebříků _Typ žebříku_) a název typu.
+   - V seznamu je u artiklu druh a typ, např. _Příruční regál_: typové označení artiklu (pole
+     _Systém / typové označení_), jinak hodnota pole _Typ regálu_ (u žebříků _Typ žebříku_),
+     a název typu.
    - **Filtry podle kontrol:** _Příští kontrola_ (po termínu, do 30 / 60 / 90 dní) a _Poslední
      kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
      kontrole své provozovny, která zahrnovala jeho typ, ale nemá v ní výsledek). Filtry platí

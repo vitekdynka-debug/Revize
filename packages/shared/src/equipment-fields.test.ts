@@ -182,5 +182,9 @@ describe('itemTypeLabel', () => {
     expect(itemTypeLabel(undefined, {})).toBe('?');
     // A kind stored whole by an older merge ("Policový regál") is not repeated.
     expect(itemTypeLabel(rack, { rack_type: 'Policový regál' })).toBe('Policový regál');
+    // The item's "typové označení" first (lower case as typed in the field).
+    expect(itemTypeLabel(rack, { system: 'příruční', rack_type: 'Paletový' })).toBe(
+      'Příruční regál',
+    );
   });
 });
