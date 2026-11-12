@@ -260,3 +260,25 @@ export function displayFields(
       return [{ label: field.label, value: formatFieldValue(field, value) }];
     });
 }
+
+/**
+ * How an item's type reads in lists: the value of the type's first select field that tells the
+ * kind ("Typ regálu" = "Paletový") before the type name → "Paletový regál". Types merged into one
+ * (ADR-0018 racks, `planTypeMerge`) keep the kind in such a field; without one, the type name.
+ */
+export function itemTypeLabel(
+  type: { name: string; fieldDefinitions: readonly FieldDefinition[] } | undefined,
+  values: Record<string, unknown>,
+): string {
+  if (!type) return '?';
+  const kindField = type.fieldDefinitions
+    .filter((f) => !f.archived && f.kind === 'select' && /^(typ|druh)\b/i.test(f.label))
+    .sort((a, b) => a.order - b.order)[0];
+  const kind = kindField ? values[kindField.key] : null;
+  if (typeof kind !== 'string' || !kind.trim()) return type.name;
+  const name = type.name.trim();
+  // "Paletový" + "Regál" → "Paletový regál"; a name already containing the kind stays as it is.
+  if (name.toLocaleLowerCase('cs').includes(kind.trim().toLocaleLowerCase('cs'))) return name;
+  const rest = name.charAt(0).toLocaleLowerCase('cs') + name.slice(1);
+  return `${kind.trim()} ${rest}`;
+}

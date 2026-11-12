@@ -21,6 +21,7 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_SEPARATOR,
   itemLabel,
+  itemTypeLabel,
   type Item,
   type ItemStatus,
 } from '@revize/shared';
@@ -425,7 +426,15 @@ export function ItemsPage() {
                 {item.itemNumber ?? '–'}
               </Table.Td>
               <Table.Td fw={600}>{item.designation ?? ''}</Table.Td>
-              <Table.Td>{item.equipmentTypeName}</Table.Td>
+              <Table.Td>
+                {itemTypeLabel(
+                  types.data?.find((t) => t.id === item.equipmentTypeId) ?? {
+                    name: item.equipmentTypeName,
+                    fieldDefinitions: [],
+                  },
+                  item.fieldValues,
+                )}
+              </Table.Td>
               <Table.Td>{locationLabel(item.locationPath)}</Table.Td>
               <Table.Td>{firstText(item)}</Table.Td>
               <Table.Td>

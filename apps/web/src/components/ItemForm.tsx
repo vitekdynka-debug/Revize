@@ -2,6 +2,7 @@ import {
   Alert,
   Button,
   Group,
+  NumberInput,
   SegmentedControl,
   Select,
   SimpleGrid,
@@ -14,7 +15,9 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_SEPARATOR,
   buildFieldValuesSchema,
+  canonicalItemNumber,
   itemLabel,
+  normalizeDesignation,
   missingRequiredFields,
   newId,
   type Item,
@@ -51,7 +54,16 @@ export interface ItemFormProps {
     equipmentTypeId?: string;
     itemNumber?: string;
     qrCode?: string;
+    /** "Založit podobný": the values of the item it is made from. */
+    fieldValues?: Record<string, unknown>;
   };
+  /**
+   * Types offered first (field mode: the types inspected here); the rest behind "Další typy…".
+   * Empty or omitted: all types at once.
+   */
+  preferredTypeIds?: readonly string[];
+  /** Values offered in text fields by field key (e.g. manufacturers already in the inspection). */
+  valueSuggestions?: Record<string, readonly string[]>;
   /** Field mode: customer and site come from the inspection and cannot be changed. */
   fixedSite?: boolean;
   /** Field mode: only the equipment types of the inspection. */
@@ -63,6 +75,7 @@ export interface ItemFormProps {
   onCreate?: (
     body: z.input<typeof createItemSchema> & { id: string },
     locationPath: string[],
+    options?: { batch: boolean },
   ) => Promise<void>;
   /**
    * Field mode: stores an edit on the device (outbox) instead of calling the API. Gets only the
@@ -81,6 +94,8 @@ export function ItemForm({
   defaults = {},
   fixedSite,
   allowedTypeIds,
+  preferredTypeIds,
+  valueSuggestions,
   onCreate,
   onUpdate,
   onCreateLocation,
@@ -111,17 +126,36 @@ export function ItemForm({
   const [createId] = useState(newId);
   const [nextInspection, setNextInspection] = useState(item?.nextInspectionDate ?? '');
   const [interval, setInterval] = useState<number | null>(item?.inspectionIntervalMonths ?? null);
-  const [values, setValues] = useState<Record<string, unknown>>(item?.fieldValues ?? {});
+  const [values, setValues] = useState<Record<string, unknown>>(
+    item?.fieldValues ?? defaults.fieldValues ?? {},
+  );
+  // Several pieces at once ("4 stejné ruční vozíky"): the same values, own číslo and označení.
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const batch = item === null && pieces.length > 1;
+  const [allTypes, setAllTypes] = useState(false);
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'in_service');
   const [reason, setReason] = useState('');
   const [retired, setRetired] = useState(item?.retired ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const type = types.data?.find((t) => t.id === typeId);
-  const typeOptions = (types.data ?? [])
+  const usableTypes = (types.data ?? [])
     .filter((t) => !t.archived || t.id === item?.equipmentTypeId)
-    .filter((t) => !allowedTypeIds?.length || allowedTypeIds.includes(t.id))
-    .map((t) => ({ value: t.id, label: t.archived ? `${t.name} (archivován)` : t.name }));
+    .filter((t) => !allowedTypeIds?.length || allowedTypeIds.includes(t.id));
+  const preferred = preferredTypeIds?.length ? new Set(preferredTypeIds) : null;
+  const shownTypes =
+    preferred && !allTypes
+      ? usableTypes.filter((t) => preferred.has(t.id) || t.id === typeId)
+      : usableTypes;
+  const typeOptions = [
+    ...shownTypes.map((t) => ({
+      value: t.id,
+      label: t.archived ? `${t.name} (archivován)` : t.name,
+    })),
+    ...(shownTypes.length < usableTypes.length
+      ? [{ value: MORE_TYPES, label: 'Další typy…' }]
+      : []),
+  ];
   const locationOptions = useMemo(
     () =>
       (locations.data ?? []).map((l) => ({
@@ -162,12 +196,58 @@ export function ItemForm({
   );
 
   const missing = type ? missingRequiredFields(type.fieldDefinitions, values) : [];
+
+  /** Creates every piece in turn; stops at the first that fails (the others stay created). */
+  const createPieces = async (
+    common: Omit<z.input<typeof createItemSchema>, 'itemNumber' | 'designation' | 'qrCode'>,
+  ) => {
+    const path = locations.data?.find((l) => l.id === locationId)?.pathNames ?? [];
+    let done = 0;
+    try {
+      for (const piece of pieces) {
+        const body = {
+          ...common,
+          id: piece.id,
+          itemNumber: piece.itemNumber.trim() || null,
+          designation: piece.designation.trim(),
+          qrCode: '',
+        };
+        if (onCreate) await onCreate(body, path, { batch: true });
+        else await create.mutateAsync(body);
+        done += 1;
+      }
+    } catch (error) {
+      setPieces((current) => current.slice(done));
+      notifyError(error);
+      return;
+    }
+    notifySaved(`Založeno ${done} artiklů`);
+    onDone();
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
     if (!siteId) next.siteId = 'Vyberte provozovnu';
     if (!typeId) next.equipmentTypeId = 'Vyberte typ vybavení';
     if (statusChanged && !reason.trim()) next.reason = 'Uveďte důvod změny stavu';
+    if (batch) {
+      const numbers = new Map<string, number>();
+      const designations = new Map<string, number>();
+      pieces.forEach((piece, index) => {
+        const raw = piece.itemNumber.trim();
+        const number = raw ? canonicalItemNumber(raw) : null;
+        if (raw && !number) next[`pieces.${index}.itemNumber`] = 'Číslo TZ má 1 až 5 číslic';
+        else if (number && numbers.has(number))
+          next[`pieces.${index}.itemNumber`] = `Stejné číslo jako kus ${numbers.get(number)! + 1}`;
+        else if (number) numbers.set(number, index);
+        const key = normalizeDesignation(piece.designation);
+        if (key && designations.has(key))
+          next[`pieces.${index}.designation`] =
+            `Stejné označení jako kus ${designations.get(key)! + 1}`;
+        else if (key) designations.set(key, index);
+      });
+    }
     // Missing required values do not block saving (the item is incomplete, see the warning);
     // wrong values do.
     const parsed = type
@@ -241,6 +321,9 @@ export function ItemForm({
         },
         handlers,
       );
+    } else if (batch) {
+      const { qrCode: _qr, designation: _designation, ...shared } = common;
+      void createPieces(shared);
     } else {
       // Empty: the item has no číslo TZ (racks; or filled in on site later, ADR-0020).
       const body = { id: createId, ...common, itemNumber: itemNumber.trim() || null };
@@ -323,42 +406,76 @@ export function ItemForm({
           <Select
             label="Typ vybavení"
             required
+            allowDeselect={false}
             data={typeOptions}
             value={typeId}
             error={errors.equipmentTypeId}
-            onChange={changeType}
+            onChange={(next) => {
+              // "Další typy…" opens the full list instead of choosing.
+              if (next === MORE_TYPES) setAllTypes(true);
+              else changeType(next);
+            }}
           />
-          <TextInput
-            label="Číslo TZ"
-            description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = bez čísla TZ"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="bez čísla"
-            value={itemNumber}
-            error={errors.itemNumber}
-            onChange={(e) => setItemNumber(e.currentTarget.value.replace(/\D/g, '').slice(0, 5))}
-          />
-          <TextInput
-            label="Označení"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            description="Např. Ž-01 nebo A1-12 (předvolba a číslo), v provozovně jen jednou"
-            value={designation}
-            error={errors.designation}
-            onChange={(e) => setDesignation(e.currentTarget.value)}
-          />
-          <TextInput
-            label="QR kód štítku"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            value={qrCode}
-            error={errors.qrCode}
-            onChange={(e) => setQrCode(e.currentTarget.value)}
-          />
+          {item === null && (
+            <NumberInput
+              label="Počet kusů"
+              description="Více stejných artiklů najednou, každý se svým číslem a označením"
+              min={1}
+              max={MAX_PIECES}
+              allowDecimal={false}
+              value={Math.max(1, pieces.length)}
+              onChange={(v) => {
+                const count = Math.min(MAX_PIECES, Math.max(1, Number(v) || 1));
+                setPieces((current) => {
+                  if (count <= 1) return [];
+                  const start = current.length
+                    ? current
+                    : [{ id: createId, itemNumber, designation }];
+                  return Array.from(
+                    { length: count },
+                    (_, i) => start[i] ?? { id: newId(), itemNumber: '', designation: '' },
+                  );
+                });
+              }}
+            />
+          )}
+          {!batch && (
+            <>
+              <TextInput
+                label="Číslo TZ"
+                description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = bez čísla TZ"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="bez čísla"
+                value={itemNumber}
+                error={errors.itemNumber}
+                onChange={(e) =>
+                  setItemNumber(e.currentTarget.value.replace(/\D/g, '').slice(0, 5))
+                }
+              />
+              <TextInput
+                label="Označení"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                description="Např. Ž-01 nebo A1-12 (předvolba a číslo), v provozovně jen jednou"
+                value={designation}
+                error={errors.designation}
+                onChange={(e) => setDesignation(e.currentTarget.value)}
+              />
+              <TextInput
+                label="QR kód štítku"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                value={qrCode}
+                error={errors.qrCode}
+                onChange={(e) => setQrCode(e.currentTarget.value)}
+              />
+            </>
+          )}
           <DateField
             label="Příští kontrola"
             value={nextInspection ?? ''}
@@ -375,11 +492,59 @@ export function ItemForm({
           )}
         </SimpleGrid>
 
+        {batch && (
+          <Stack gap={6} data-testid="item-pieces">
+            <Text size="sm" fw={500}>
+              Kusy ({pieces.length}) – číslo TZ a označení každého kusu
+            </Text>
+            {pieces.map((piece, index) => (
+              <Group key={piece.id} gap="sm" align="flex-start" wrap="nowrap">
+                <Text size="sm" c="dimmed" w={28} pt={8}>
+                  {index + 1}.
+                </Text>
+                <TextInput
+                  aria-label={`Číslo TZ kusu ${index + 1}`}
+                  placeholder="bez čísla"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  w={140}
+                  value={piece.itemNumber}
+                  error={errors[`pieces.${index}.itemNumber`]}
+                  onChange={(e) => {
+                    const value = e.currentTarget.value.replace(/\D/g, '').slice(0, 5);
+                    setPieces((current) =>
+                      current.map((p, i) => (i === index ? { ...p, itemNumber: value } : p)),
+                    );
+                  }}
+                />
+                <TextInput
+                  aria-label={`Označení kusu ${index + 1}`}
+                  placeholder="označení"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  style={{ flex: 1 }}
+                  value={piece.designation}
+                  error={errors[`pieces.${index}.designation`]}
+                  onChange={(e) => {
+                    const value = e.currentTarget.value;
+                    setPieces((current) =>
+                      current.map((p, i) => (i === index ? { ...p, designation: value } : p)),
+                    );
+                  }}
+                />
+              </Group>
+            ))}
+          </Stack>
+        )}
+
         {type ? (
           <DynamicFields
             definitions={type.fieldDefinitions}
             values={values}
             onChange={setValues}
+            suggestions={valueSuggestions}
             errors={fieldValueErrors(errors)}
           />
         ) : (
@@ -429,7 +594,7 @@ export function ItemForm({
         )}
         <Group justify="flex-end">
           <Button type="submit" loading={create.isPending || update.isPending}>
-            {item ? 'Uložit' : 'Založit artikl'}
+            {item ? 'Uložit' : batch ? `Založit ${pieces.length} artiklů` : 'Založit artikl'}
           </Button>
         </Group>
       </Stack>
@@ -445,3 +610,14 @@ function stableJson(value: unknown): string {
       : v,
   );
 }
+
+/** One piece of a batch: its own číslo TZ and označení (client id for idempotent saving). */
+interface Piece {
+  id: string;
+  itemNumber: string;
+  designation: string;
+}
+
+const MAX_PIECES = 50;
+/** Select value of "Další typy…". */
+const MORE_TYPES = '__more';

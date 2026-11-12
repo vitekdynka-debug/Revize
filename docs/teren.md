@@ -23,9 +23,13 @@ techniků současně. Stačí v ní zapsat první výsledek.
   - Filtry: _Nezkontrolované_ / _Závady_ / _Vše_, hala, typ a hledání (číslo TZ, označení,
     QR kód, výrobce…). Označení se hledá bez ohledu na velká písmena a pomlčky (`ž01` najde
     „Ž-01“).
-  - Nahoře je počet zkontrolovaných a počty v pořádku, závad a vyřazených.
-  - Klepnutím na řádek otevřete kartu artiklu. Po uložení výsledku se sama otevře další
-    nezkontrolovaná položka seznamu.
+  - Nahoře je počet zkontrolovaných a počty v pořádku, závad a vyřazených. Počty se řídí
+    filtrem haly, typu a hledání (vyfiltrované regály = kolik regálů zbývá); celkový stav je
+    vedle v závorce.
+  - V řádku je druh a typ artiklu, např. _Paletový regál_ (pole Typ regálu + typ Regál).
+  - Klepnutím na řádek otevřete kartu artiklu. Po uložení výsledku se vrátíte do seznamu.
+  - Na kartě jsou šipky **‹ ›** na předchozí a další artikl seznamu (v pořadí a s filtry
+    seznamu).
 - **Skenovat:** kamera zůstává zapnutá mezi artikly.
   - Načte se jen kód pod křížem a teprve po třech shodných přečteních, takže sousední štítky na
     archu nevadí.
@@ -57,6 +61,15 @@ techniků současně. Stačí v ní zapsat první výsledek.
 
 Nový artikl jde v terénu uložit i bez povinných údajů (např. když chybí štítek s výrobcem);
 kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
+
+- **Typ vybavení** nabízí nejdřív typy, které v kontrole už jsou; ostatní jsou pod **Další
+  typy…**.
+- Textová pole (výrobce, popis…) při psaní nabízejí hodnoty, které už mají artikly v této
+  kontrole.
+- **Založit podobný** (na kartě artiklu) otevře nový artikl se stejným typem, umístěním a údaji;
+  vyplníte jen číslo TZ a označení.
+- **Počet kusů:** více stejných artiklů najednou (např. 4 ruční vozíky). Každý kus má svůj
+  řádek s číslem TZ a označením, ostatní údaje jsou společné.
 
 ## Karta artiklu
 
@@ -99,6 +112,9 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
   změnili, nejdřív do zařízení a pak na server (funguje i bez signálu). Stav, vyřazení z evidence
   a interval kontrol mění kancelář.
 - Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.
+- **Rozepsaná závada** se průběžně ukládá do zařízení: popis zůstane, i když mezitím fotíte,
+  kartu zavřete nebo se aplikace po focení znovu načte. Zmizí až po uložení výsledku.
+- Klepnutím do vyplněného pole se kurzor postaví na konec textu.
 - **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Nejdřív je potřeba smazat fotky
   závady.
 

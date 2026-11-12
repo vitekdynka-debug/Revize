@@ -211,8 +211,45 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   const created = await (await page.request.get('/api/items?q=10003')).json();
   expect(created.items[0].locationPath).toEqual(['Hala A', 'Řada 9']);
 
+  // "Založit podobný": type, location and values of 10003, two pieces with own numbers.
+  await page.getByText('Vše (5)').click();
+  await page.getByTestId('item-10003').click();
+  await sheet(page).getByRole('button', { name: 'Založit podobný' }).click();
+  const similar = page.getByRole('dialog').filter({ hasText: 'Nový artikl' });
+  await expect(similar.getByRole('combobox', { name: 'Typ vybavení' })).toHaveValue(
+    'Žebřík (terén)',
+  );
+  await expect(similar.getByRole('combobox', { name: 'Výrobce' })).toHaveValue('Krause');
+  await similar.getByLabel('Počet kusů').fill('2');
+  await similar.getByLabel('Číslo TZ kusu 1').fill('10004');
+  await similar.getByLabel('Označení kusu 1').fill('Ž-04');
+  await similar.getByLabel('Číslo TZ kusu 2').fill('10005');
+  await similar.getByLabel('Označení kusu 2').fill('Ž-05');
+  await similar.getByRole('button', { name: 'Založit 2 artiklů' }).click();
+  await expect(similar).toBeHidden();
+  await expect(page.getByTestId('progress')).toHaveText('3 / 7 zkontrolováno');
+
+  // The card has ‹ › through the list as filtered.
+  await page.getByTestId('item-10004').click();
+  await sheet(page).getByRole('button', { name: 'Další artikl' }).click();
+  await expect(sheet(page).getByTestId('designation')).toHaveText('Ž-05');
+
+  // A defect written but not saved stays when the card is closed (or the page reloads).
+  await sheet(page).getByRole('button', { name: 'Závada – provoz možný' }).click();
+  await sheet(page).getByLabel('Popis závady').fill('Chybí štítek');
+  await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
+  await expect(sheet(page)).toBeHidden();
+  await page.reload();
+  await page.getByText('Vše (7)').click();
+  await page.getByTestId('item-10005').click();
+  await expect(sheet(page).getByLabel('Popis závady')).toHaveValue('Chybí štítek');
+  await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
+  // Saved: back to the list (not the next item).
+  await expect(sheet(page)).toBeHidden();
+  await expect(page.getByTestId('progress')).toHaveText('4 / 7 zkontrolováno');
+
   // Leaving keeps the inspection open with its progress.
   await page.getByRole('button', { name: 'Ukončit práci' }).click();
   await page.getByRole('button', { name: 'Odejít' }).click();
-  await expect(page.getByText('3 / 5 zkontrolováno')).toBeVisible();
+  await expect(page.getByText('4 / 7 zkontrolováno')).toBeVisible();
 });

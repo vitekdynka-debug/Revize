@@ -2,11 +2,13 @@ import { AppShell, Group, Text } from '@mantine/core';
 import { IconBuildingWarehouse } from '@tabler/icons-react';
 import type { CurrentUser } from '@revize/shared';
 import { Outlet } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { DEMO } from '../api/client.js';
 import { AuthGate } from '../components/AuthGate.js';
 import { UserMenu } from '../components/Layout.js';
 import { ButtonLink } from '../components/links.js';
 import { DemoBadge } from '../demo/DemoParts.js';
+import { caretToEndOnFocus } from '../platform/caret.js';
 import { SyncStatus, useFieldSync } from './SyncStatus.js';
 
 /** Field shell for the iPad: no office navigation, large touch targets. */
@@ -16,6 +18,8 @@ export function FieldLayout() {
 
 function FieldShell({ user }: { user: CurrentUser }) {
   useFieldSync(user.id);
+  // Tapping into a filled field puts the caret at the end (adding to a description).
+  useEffect(() => caretToEndOnFocus(), []);
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>

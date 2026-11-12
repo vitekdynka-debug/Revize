@@ -18,6 +18,7 @@ import {
   FIT_LABELS,
   SEVERITY_LABELS,
   itemLabel,
+  itemTypeLabel,
   outcomeLabel,
   severityOf,
   type EquipmentType,
@@ -26,7 +27,8 @@ import {
   type Photo,
   type Severity,
 } from '@revize/shared';
-import { IconAlertTriangle, IconBan, IconCheck, IconPencil } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBan, IconCheck, IconCopy, IconPencil } from '@tabler/icons-react';
+import { PrevNext, type PrevNextProps } from '../components/PrevNext.js';
 import { useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
@@ -44,6 +46,7 @@ import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { cancelPhoto, saveDraftPhoto } from '../offline/outbox.js';
 import { PhotoStrip, useLocalPhotos } from './PhotoStrip.js';
 import { usePhotoEditor } from './PhotoEditor.js';
+import { clearDefectDraft, loadDefectDraft, saveDefectDraft } from './defect-draft.js';
 
 export interface ItemSheetProps {
   inspectionId: string;
@@ -55,6 +58,10 @@ export interface ItemSheetProps {
   onSaved: (result: InspectionResult) => void;
   /** Opens the item's details for editing (číslo, označení, umístění, fields). */
   onEdit?: () => void;
+  /** Starts a new item with this one's type, location and values (not its number). */
+  onCopy?: () => void;
+  /** Position in the list as filtered, for the ‹ › arrows. */
+  position?: PrevNextProps;
 }
 
 type Choice = { outcome: 'ok' } | { outcome: 'defect'; severity: Severity };
@@ -85,7 +92,8 @@ export function ItemSheet(props: ItemSheetProps) {
                 {props.item.designation}
               </Title>
             )}
-            <Text c="dimmed">{props.type?.name}</Text>
+            <Text c="dimmed">{itemTypeLabel(props.type, props.item.fieldValues)}</Text>
+            {props.position && <PrevNext {...props.position} />}
           </Group>
         )
       }
@@ -104,6 +112,7 @@ function SheetBody({
   onClose,
   onSaved,
   onEdit,
+  onCopy,
 }: ItemSheetProps & { item: InspectionItem }) {
   const phone = useMediaQuery('(max-width: 48em)') ?? false;
   const record = useRecordResult(inspectionId);
@@ -116,14 +125,53 @@ function SheetBody({
   // One result id per opened card: saving again (e.g. after a failed photo upload) repeats it.
   const resultId = useRef(current?.id ?? newId()).current;
 
+  // A defect written but not saved yet (page reloaded by the camera, card closed): back again.
+  const [draft] = useState(() => loadDefectDraft(inspectionId, item.id));
   const [choice, setChoice] = useState<Choice | null>(
-    current?.outcome === 'defect'
-      ? { outcome: 'defect', severity: severityOf(current) ?? 'amber' }
-      : null,
+    draft
+      ? { outcome: 'defect', severity: draft.severity }
+      : current?.outcome === 'defect'
+        ? { outcome: 'defect', severity: severityOf(current) ?? 'amber' }
+        : null,
   );
-  const [description, setDescription] = useState(current?.defectDescription ?? '');
-  const [includeInProtocol, setIncludeInProtocol] = useState(current?.includeInProtocol ?? true);
-  const [photosInProtocol, setPhotosInProtocol] = useState(current?.photosInProtocol ?? true);
+  const [description, setDescription] = useState(
+    draft?.description ?? current?.defectDescription ?? '',
+  );
+  const [includeInProtocol, setIncludeInProtocol] = useState(
+    draft?.includeInProtocol ?? current?.includeInProtocol ?? true,
+  );
+  const [photosInProtocol, setPhotosInProtocol] = useState(
+    draft?.photosInProtocol ?? current?.photosInProtocol ?? true,
+  );
+  // Keeps the defect being written on the device until it is saved.
+  useEffect(() => {
+    if (readOnly || choice?.outcome !== 'defect') return;
+    const unchanged =
+      current?.outcome === 'defect' &&
+      description === (current.defectDescription ?? '') &&
+      choice.severity === severityOf(current) &&
+      includeInProtocol === current.includeInProtocol &&
+      photosInProtocol === current.photosInProtocol;
+    if (unchanged || (!description.trim() && !current)) {
+      clearDefectDraft(inspectionId, item.id);
+      return;
+    }
+    saveDefectDraft(inspectionId, item.id, {
+      description,
+      severity: choice.severity,
+      includeInProtocol,
+      photosInProtocol,
+    });
+  }, [
+    readOnly,
+    choice,
+    description,
+    includeInProtocol,
+    photosInProtocol,
+    current,
+    inspectionId,
+    item.id,
+  ]);
   // Racks: risk levels of ČSN EN 15635. Other types: fit, a defect not preventing safe operation
   // (stored as green) or unfit (stored as red, out of service).
   const riskLevels = type?.riskLevels ?? true;
@@ -188,6 +236,7 @@ function SheetBody({
       notifyError(error);
       return;
     }
+    clearDefectDraft(inspectionId, item.id);
     notifySaved(`${itemLabel(item)}: ${outcomeLabel(result, riskLevels)}`);
     onSaved(result);
   };
@@ -301,16 +350,29 @@ function SheetBody({
         </Text>
         {item.qrCode && <Badge variant="light">QR {item.qrCode}</Badge>}
         {item.status === 'out_of_service' && <Badge color="red">Vyřazen z provozu</Badge>}
-        {onEdit && !readOnly && (
-          <Button
-            variant="light"
-            size="md"
-            ml="auto"
-            leftSection={<IconPencil size={18} />}
-            onClick={onEdit}
-          >
-            Upravit údaje
-          </Button>
+        {!readOnly && (onEdit || onCopy) && (
+          <Group gap="xs" ml="auto">
+            {onCopy && (
+              <Button
+                variant="default"
+                size="md"
+                leftSection={<IconCopy size={18} />}
+                onClick={onCopy}
+              >
+                Založit podobný
+              </Button>
+            )}
+            {onEdit && (
+              <Button
+                variant="light"
+                size="md"
+                leftSection={<IconPencil size={18} />}
+                onClick={onEdit}
+              >
+                Upravit údaje
+              </Button>
+            )}
+          </Group>
         )}
       </Group>
 
@@ -489,7 +551,13 @@ function SheetBody({
                 return;
               removeResult.mutate(
                 { itemId: item.id },
-                { onSuccess: onClose, onError: notifyError },
+                {
+                  onSuccess: () => {
+                    clearDefectDraft(inspectionId, item.id);
+                    onClose();
+                  },
+                  onError: notifyError,
+                },
               );
             }}
           >

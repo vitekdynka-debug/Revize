@@ -113,6 +113,13 @@
       "when": 1794390418783,
       "tag": "0015_optional_item_number",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794499072258,
+      "tag": "0016_rename_pallet_rack",
+      "breakpoints": true
     }
   ]
 }

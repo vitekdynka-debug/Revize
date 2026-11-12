@@ -19,6 +19,8 @@ export interface DynamicFieldsProps {
   /** Errors by field key. */
   errors?: Record<string, string>;
   disabled?: boolean;
+  /** More values offered in text fields by field key (e.g. those already in the inspection). */
+  suggestions?: Record<string, readonly string[]>;
 }
 
 /** Form controls generated from an equipment type's field definitions (ADR-0006). */
@@ -28,6 +30,7 @@ export function DynamicFields({
   onChange,
   errors = {},
   disabled,
+  suggestions = {},
 }: DynamicFieldsProps) {
   const fields = definitions.filter((f) => !f.archived).sort((a, b) => a.order - b.order);
   // Fields with a default product (bay load = level load × levels) follow their inputs until
@@ -47,12 +50,14 @@ export function DynamicFields({
         };
         const value = values[field.key];
         switch (field.kind) {
-          case 'text':
-            return field.suggestions.length ? (
+          case 'text': {
+            // The type's own suggestions and what is already used (e.g. in this inspection).
+            const offered = [...new Set([...(suggestions[field.key] ?? []), ...field.suggestions])];
+            return offered.length ? (
               <Autocomplete
                 key={field.key}
                 {...common}
-                data={field.suggestions}
+                data={offered}
                 value={(value as string) ?? ''}
                 onChange={(v) => set(field.key, v)}
               />
@@ -64,6 +69,7 @@ export function DynamicFields({
                 onChange={(e) => set(field.key, e.currentTarget.value)}
               />
             );
+          }
           case 'number':
           case 'integer':
             return (

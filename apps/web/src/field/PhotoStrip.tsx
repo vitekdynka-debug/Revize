@@ -152,7 +152,15 @@ export function PhotoStrip({
           ))}
         </Group>
       )}
-      <Modal opened={open !== null} onClose={() => setOpen(null)} size="xl" title={title} centered>
+      <Modal
+        opened={open !== null}
+        onClose={() => setOpen(null)}
+        size="xl"
+        title={title}
+        centered
+        // Above the item card (drawer, z-index 300) it is opened from.
+        zIndex={400}
+      >
         {open && (
           <Stack>
             {'server' in open ? (

@@ -5,8 +5,10 @@ import {
   missingRequiredFields,
   displayFields,
   fieldDefinitionsSchema,
+  itemTypeLabel,
   type FieldDefinition,
 } from './equipment-fields.js';
+import { equipmentTypePreset } from './equipment-presets.js';
 
 const definitions: FieldDefinition[] = fieldDefinitionsSchema.parse([
   { key: 'manufacturer', label: 'Výrobce', kind: 'text', required: true, order: 0 },
@@ -163,5 +165,20 @@ describe('incomplete items', () => {
     ).toBe(false);
     expect(missingRequiredFields(defs, { note: 'x', rungs: 8 })).toEqual(['Výrobce']);
     expect(missingRequiredFields(defs, { manufacturer: 'Alve', rungs: 8 })).toEqual([]);
+  });
+});
+
+describe('itemTypeLabel', () => {
+  const rack = equipmentTypePreset('rack')!;
+  it('puts the kind before the type name', () => {
+    expect(itemTypeLabel(rack, { rack_type: 'Paletový' })).toBe('Paletový regál');
+    expect(itemTypeLabel(rack, { rack_type: 'Vjezdový (drive-in)' })).toBe(
+      'Vjezdový (drive-in) regál',
+    );
+    expect(itemTypeLabel(rack, {})).toBe('Regál');
+    expect(itemTypeLabel({ ...rack, name: 'Paletový regál' }, { rack_type: 'Paletový' })).toBe(
+      'Paletový regál',
+    );
+    expect(itemTypeLabel(undefined, {})).toBe('?');
   });
 });

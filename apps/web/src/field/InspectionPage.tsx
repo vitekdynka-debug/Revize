@@ -23,6 +23,7 @@ import {
   canonicalItemNumber,
   designationTokens,
   itemLabel,
+  itemTypeLabel,
   normalizeDesignation,
   findScannedItem,
   newId,
@@ -145,7 +146,7 @@ function ItemRow({
                     {item.designation}
                   </Text>
                 )}
-                {type?.name ?? '?'}
+                {itemTypeLabel(type, item.fieldValues)}
               </Text>
               <Text size="sm" c="dimmed">
                 {[position, typeof manufacturer === 'string' ? manufacturer : null]
@@ -239,18 +240,61 @@ export function InspectionPage() {
     [items],
   );
   const typeById = useMemo(() => new Map((types.data ?? []).map((t) => [t.id, t])), [types.data]);
+  // New items: the types inspected here first ("Další typy…" for the rest) and the text values
+  // already used in this inspection (manufacturers, descriptions…) offered while typing.
+  const inspectedTypeIds = useMemo(
+    () => [...new Set(items.map((i) => i.equipmentTypeId))],
+    [items],
+  );
+  const valueSuggestions = useMemo(() => {
+    const byKey = new Map<string, Set<string>>();
+    for (const item of items) {
+      for (const [key, value] of Object.entries(item.fieldValues)) {
+        if (typeof value !== 'string' || !value.trim()) continue;
+        byKey.set(key, (byKey.get(key) ?? new Set()).add(value.trim()));
+      }
+    }
+    return Object.fromEntries(
+      [...byKey].map(([key, values]) => [
+        key,
+        [...values].sort((a, b) => a.localeCompare(b, 'cs')),
+      ]),
+    );
+  }, [items]);
 
   const [filter, setFilter] = useState<Filter>('unchecked');
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [hallFilter, setHallFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState<{ id: string; source: Source } | null>(null);
+  // The open card survives a reload (iPadOS reloads the page after the camera now and then).
+  const openKey = `revize:open:${inspectionId}`;
+  const [open, setOpen] = useState<{ id: string; source: Source } | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(openKey);
+      return raw ? (JSON.parse(raw) as { id: string; source: Source }) : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      if (open) sessionStorage.setItem(openKey, JSON.stringify(open));
+      else sessionStorage.removeItem(openKey);
+    } catch {
+      // Not stored: the card is just not reopened after a reload.
+    }
+  }, [open, openKey]);
   const [scanning, setScanning] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
   const [unknown, setUnknown] = useState<string | null>(null);
   const unknownTarget = unknown ? parseScanPayload(unknown) : null;
   const unknownNumber = unknownTarget?.kind === 'digits' ? unknownTarget.itemNumber : null;
-  const [newItem, setNewItem] = useState<{ qrCode?: string; itemNumber?: string } | null>(null);
+  const [newItem, setNewItem] = useState<{
+    qrCode?: string;
+    itemNumber?: string;
+    /** "Založit podobný": type, location and values of this item. */
+    copyOf?: InspectionItem;
+  } | null>(null);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -302,17 +346,26 @@ export function InspectionPage() {
     () => [...new Set(items.map((i) => i.locationPath[0]).filter((h): h is string => !!h))],
     [items],
   );
-  const visible = useMemo(
+  // Items of the chosen hall, type and search: the counts follow them ("zbývá" of racks only).
+  const scoped = useMemo(
     () =>
       items.filter(
         (i) =>
-          (filter === 'all' ||
-            (filter === 'unchecked' ? !i.result : i.result?.outcome === 'defect')) &&
           (!typeFilter || i.equipmentTypeId === typeFilter) &&
           (!hallFilter || i.locationPath[0] === hallFilter) &&
           matches(i, search),
       ),
-    [items, filter, typeFilter, hallFilter, search],
+    [items, typeFilter, hallFilter, search],
+  );
+  const filtered = scoped.length !== items.length;
+  const scopedProgress = progressOf(scoped);
+  const visible = useMemo(
+    () =>
+      scoped.filter(
+        (i) =>
+          filter === 'all' || (filter === 'unchecked' ? !i.result : i.result?.outcome === 'defect'),
+      ),
+    [scoped, filter],
   );
   const groups = useMemo(() => {
     const map = new Map<string, InspectionItem[]>();
@@ -343,13 +396,17 @@ export function InspectionPage() {
     [],
   );
 
-  const afterSave = () => {
-    if (open?.source !== 'list') return setOpen(null);
-    // Walking down the list: continue with the next unchecked item below this one.
-    const index = visible.findIndex((i) => i.id === open.id);
-    const next = visible.slice(index + 1).find((i) => !i.result && i.id !== open.id);
-    setOpen(next ? { id: next.id, source: 'list' } : null);
-  };
+  // After a result the list is shown again (the next item is chosen by the technician).
+  const afterSave = () => setOpen(null);
+  // ‹ › on the card: the items of the list as filtered. The open item may have left the list
+  // (checked under "Nezkontrolované"); then the arrows go on from where it was.
+  const [walk, setWalk] = useState<InspectionItem[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    if (!walk.some((i) => i.id === open.id)) setWalk(visible);
+    // Taken when a card opens outside the current walk only.
+  }, [open]);
+  const cardIndex = open ? walk.findIndex((i) => i.id === open.id) : -1;
 
   if (inspection.isPending || itemsQuery.isPending) return <Loader m="xl" />;
   if (inspection.error) return <Alert color="red">{inspection.error.message}</Alert>;
@@ -387,16 +444,23 @@ export function InspectionPage() {
       <Paper withBorder p="md" radius="md">
         <Group justify="space-between" mb={6}>
           <Text fw={700} size="lg" data-testid="progress">
-            {progress.checked} / {progress.total} zkontrolováno
+            {scopedProgress.checked} / {scopedProgress.total} zkontrolováno
+            {filtered && (
+              <Text span c="dimmed" fw={400} size="sm" ml={8}>
+                (podle filtru, celkem {progress.checked} / {progress.total})
+              </Text>
+            )}
           </Text>
           <Group gap="xs">
-            <Badge color="green">V pořádku {progress.ok}</Badge>
-            <Badge color="orange">Závady {progress.defect - progress.outOfService}</Badge>
-            <Badge color="red">Vyřazeno {progress.outOfService}</Badge>
+            <Badge color="green">V pořádku {scopedProgress.ok}</Badge>
+            <Badge color="orange">
+              Závady {scopedProgress.defect - scopedProgress.outOfService}
+            </Badge>
+            <Badge color="red">Vyřazeno {scopedProgress.outOfService}</Badge>
           </Group>
         </Group>
         <Progress
-          value={progress.total ? (progress.checked / progress.total) * 100 : 0}
+          value={scopedProgress.total ? (scopedProgress.checked / scopedProgress.total) * 100 : 0}
           size="xl"
           radius="xl"
         />
@@ -453,10 +517,10 @@ export function InspectionPage() {
           data={[
             {
               value: 'unchecked',
-              label: `${phone ? 'Zbývá' : 'Nezkontrolované'} (${progress.total - progress.checked})`,
+              label: `${phone ? 'Zbývá' : 'Nezkontrolované'} (${scopedProgress.total - scopedProgress.checked})`,
             },
-            { value: 'defects', label: `Závady (${progress.defect})` },
-            { value: 'all', label: `Vše (${progress.total})` },
+            { value: 'defects', label: `Závady (${scopedProgress.defect})` },
+            { value: 'all', label: `Vše (${scopedProgress.total})` },
           ]}
         />
         <Select
@@ -543,6 +607,23 @@ export function InspectionPage() {
         readOnly={readOnly}
         onClose={() => setOpen(null)}
         onSaved={afterSave}
+        position={
+          cardIndex >= 0
+            ? {
+                index: cardIndex,
+                total: walk.length,
+                onMove: (index) => {
+                  const target = walk[index];
+                  if (target) setOpen({ id: target.id, source: 'list' });
+                },
+              }
+            : undefined
+        }
+        onCopy={() => {
+          if (!openItem) return;
+          setNewItem({ copyOf: openItem });
+          setOpen(null);
+        }}
         onEdit={() => {
           if (!openItem || !open) return;
           setEditing({ item: openItem, source: open.source });
@@ -653,17 +734,28 @@ export function InspectionPage() {
             item={null}
             fixedSite
             allowedTypeIds={data.equipmentTypeIds}
+            preferredTypeIds={inspectedTypeIds}
+            valueSuggestions={valueSuggestions}
             defaults={{
               customerId: data.customerId,
               siteId: data.siteId,
               ...(data.equipmentTypeIds.length === 1
                 ? { equipmentTypeId: data.equipmentTypeIds[0] }
+                : inspectedTypeIds.length === 1
+                  ? { equipmentTypeId: inspectedTypeIds[0] }
+                  : {}),
+              ...(newItem.copyOf
+                ? {
+                    equipmentTypeId: newItem.copyOf.equipmentTypeId,
+                    ...(newItem.copyOf.locationId ? { locationId: newItem.copyOf.locationId } : {}),
+                    fieldValues: newItem.copyOf.fieldValues,
+                  }
                 : {}),
               ...(newItem.qrCode ? { qrCode: newItem.qrCode } : {}),
               ...(newItem.itemNumber ? { itemNumber: newItem.itemNumber } : {}),
             }}
             onCreateLocation={(parent, name) => createLocation.mutateAsync({ parent, name })}
-            onCreate={async (body, locationPath) => {
+            onCreate={async (body, locationPath, options) => {
               const number = body.itemNumber ? canonicalItemNumber(body.itemNumber) : null;
               const taken = number && items.find((i) => i.itemNumber === number);
               if (taken) throw new Error(`Číslo TZ ${number} už má jiný artikl.`);
@@ -696,6 +788,7 @@ export function InspectionPage() {
                   result: null,
                 },
               });
+              if (options?.batch) return;
               notifySaved(`Artikl ${itemLabel(created)} založen v zařízení`);
               // Record its result right away.
               setOpen({ id: created.id, source: 'scan' });
@@ -733,6 +826,8 @@ export function InspectionPage() {
             }}
             fixedSite
             allowedTypeIds={data.equipmentTypeIds}
+            preferredTypeIds={inspectedTypeIds}
+            valueSuggestions={valueSuggestions}
             onCreateLocation={(parent, name) => createLocation.mutateAsync({ parent, name })}
             onUpdate={async (changes, locationPath) => {
               const { item } = editing;
