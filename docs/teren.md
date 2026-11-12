@@ -152,6 +152,14 @@ zákazníků. Obnovit ukázková data jde v uživatelském menu.
 
 ## iPad: klávesnice a Apple Pencil
 
+- **Malá klávesnice velikosti iPhonu** je plovoucí klávesnice iPadu. Zapne se stažením
+  klávesnice dvěma prsty k sobě (často omylem) a iPad si ji pamatuje. Plnou klávesnici vrátíte
+  **roztažením malé klávesnice dvěma prsty** od sebe, nebo jejím přetažením ke spodnímu okraji.
+  Plovoucí klávesnici iPad ukazuje také, když je aplikace v úzkém okně (Slide Over, úzký Split
+  View nebo malé okno ve Stage Manageru). Aplikace typ klávesnice zvolit nemůže.
+- S plnou klávesnicí se karta artiklu i formuláře posunou tak, aby pole, do kterého píšete,
+  zůstalo nad klávesnicí; pod obsahem je místo, takže jde odrolovat i k tlačítku Uložit.
+
 - **Malá klávesnice nebo jen lišta dole:** iPad ukáže místo klávesnice jen lištu, když je
   připojená Bluetooth klávesnice nebo **Bluetooth čtečka** (hlásí se jako klávesnice). Klávesnici
   vyvoláte podržením šipky ⌄ na liště nebo tlačítkem čtečky pro zobrazení klávesnice iOS (u většiny

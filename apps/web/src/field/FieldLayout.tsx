@@ -9,6 +9,7 @@ import { UserMenu } from '../components/Layout.js';
 import { ButtonLink } from '../components/links.js';
 import { DemoBadge } from '../demo/DemoParts.js';
 import { caretToEndOnFocus } from '../platform/caret.js';
+import { keepFieldAboveKeyboard } from '../platform/keyboard.js';
 import { SyncStatus, useFieldSync } from './SyncStatus.js';
 
 /** Field shell for the iPad: no office navigation, large touch targets. */
@@ -20,6 +21,8 @@ function FieldShell({ user }: { user: CurrentUser }) {
   useFieldSync(user.id);
   // Tapping into a filled field puts the caret at the end (adding to a description).
   useEffect(() => caretToEndOnFocus(), []);
+  // The full iPad keyboard must not hide the field being typed into.
+  useEffect(() => keepFieldAboveKeyboard(), []);
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>

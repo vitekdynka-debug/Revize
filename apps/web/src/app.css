@@ -32,3 +32,10 @@ textarea,
 [role='radio'] {
   touch-action: manipulation;
 }
+
+/* On-screen keyboard (iPad): drawers and dialogs get room below their content, so the field
+   being typed into can scroll above the keyboard (platform/keyboard.ts sets the inset). */
+.mantine-Drawer-body,
+.mantine-Modal-body {
+  padding-bottom: calc(var(--mantine-spacing-md) + var(--keyboard-inset, 0px));
+}

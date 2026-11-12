@@ -15,7 +15,7 @@ import {
   type createEquipmentTypeSchema,
   type updateEquipmentTypeSchema,
 } from '@revize/shared';
-import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import {
   auditLog,
   equipmentType,
@@ -105,6 +105,45 @@ export function createEquipmentTypesService(db: Db) {
     return row;
   }
 
+  /**
+   * An archived type (e.g. one merged into another) gives its name up: renamed to
+   * "Regál (archiv)", so that the active type can be called "Regál". Audited.
+   */
+  async function releaseArchivedName(
+    tx: DbOrTx,
+    auth: AuthContext,
+    name: string,
+    exceptId?: string,
+  ) {
+    const [archived] = await tx
+      .select()
+      .from(equipmentType)
+      .where(
+        and(
+          eq(equipmentType.organizationId, auth.organizationId),
+          sql`lower(${equipmentType.name}) = lower(${name})`,
+          isNotNull(equipmentType.archivedAt),
+          exceptId ? ne(equipmentType.id, exceptId) : undefined,
+        ),
+      );
+    if (!archived) return;
+    let free = `${archived.name} (archiv)`;
+    for (let n = 2; await nameExists(tx, auth, free); n++) free = `${archived.name} (archiv ${n})`;
+    await tx
+      .update(equipmentType)
+      .set({ name: free, version: archived.version + 1, updatedAt: new Date() })
+      .where(eq(equipmentType.id, archived.id));
+    await recordAudit(tx, {
+      organizationId: auth.organizationId,
+      actorUserId: auth.userId,
+      action: 'equipment_type.update',
+      entityType: 'equipment_type',
+      entityId: archived.id,
+      before: { name: archived.name },
+      after: { name: free },
+    });
+  }
+
   async function nameExists(tx: DbOrTx, auth: AuthContext, name: string, exceptId?: string) {
     const [row] = await tx
       .select({ id: equipmentType.id })
@@ -155,6 +194,7 @@ export function createEquipmentTypesService(db: Db) {
         const { target, sources } = await mergeRows(tx, auth, input);
         const plan = planTypeMerge(target, sources, input);
         const name = input.name || target.name;
+        if (name !== target.name) await releaseArchivedName(tx, auth, name, target.id);
         if (name !== target.name && (await nameExists(tx, auth, name, target.id))) {
           throw nameTaken();
         }
@@ -308,6 +348,7 @@ export function createEquipmentTypesService(db: Db) {
       return db.transaction(async (tx) => {
         const [existing] = await tx.select().from(equipmentType).where(eq(equipmentType.id, id));
         if (existing && existing.organizationId === auth.organizationId) return toDto(existing, 0);
+        await releaseArchivedName(tx, auth, values.name);
         if (await nameExists(tx, auth, values.name)) throw nameTaken();
         const [row] = await tx
           .insert(equipmentType)
@@ -333,6 +374,9 @@ export function createEquipmentTypesService(db: Db) {
       await db.transaction(async (tx) => {
         const current = await getRow(tx, auth, id);
         if (current.version !== input.version) throw versionConflict();
+        if (input.name && input.name !== current.name) {
+          await releaseArchivedName(tx, auth, input.name, id);
+        }
         if (input.name && (await nameExists(tx, auth, input.name, id))) throw nameTaken();
 
         const definitionsChanged =

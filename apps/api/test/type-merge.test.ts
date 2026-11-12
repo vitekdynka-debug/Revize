@@ -94,3 +94,40 @@ it('merges the old rack types into one, keeping the edited settings', async () =
   >();
   expect(all.find((t) => t.id === shelf.id)?.archived ?? true).toBe(true);
 });
+
+it('renames a type to the name of an archived (merged) type', async () => {
+  const make = async (name: string) =>
+    (
+      await api('POST', '/api/equipment-types', {
+        name,
+        defaultIntervalMonths: 12,
+        protocolTemplate: `# ${name}`,
+        fieldDefinitions: [{ key: 'manufacturer', label: 'Výrobce', kind: 'text', order: 0 }],
+      })
+    ).json<{ id: string; version: number }>();
+  const target = await make('Vozík paletový');
+  const old = await make('Vozík');
+  const merged = await api('POST', '/api/equipment-types/merge', {
+    targetId: target.id,
+    sourceIds: [old.id],
+  });
+  expect(merged.statusCode, merged.body).toBe(200);
+  // "Vozík" is archived now but still holds the name: the active type gets it anyway.
+  const renamed = await api('PATCH', `/api/equipment-types/${target.id}`, {
+    version: merged.json().version,
+    name: 'Vozík',
+  });
+  expect(renamed.statusCode, renamed.body).toBe(200);
+  expect(renamed.json().name).toBe('Vozík');
+  const all = (await api('GET', '/api/equipment-types?includeArchived=true')).json<
+    { id: string; name: string }[]
+  >();
+  expect(all.find((t) => t.id === old.id)?.name).toBe('Vozík (archiv)');
+  // An active type still keeps its name to itself.
+  const other = await make('Žebřík jiný');
+  const taken = await api('PATCH', `/api/equipment-types/${other.id}`, {
+    version: other.version,
+    name: 'Vozík',
+  });
+  expect(taken.statusCode).toBe(409);
+});
