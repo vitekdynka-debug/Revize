@@ -277,8 +277,12 @@ export function itemTypeLabel(
   const kind = kindField ? values[kindField.key] : null;
   if (typeof kind !== 'string' || !kind.trim()) return type.name;
   const name = type.name.trim();
-  // "Paletový" + "Regál" → "Paletový regál"; a name already containing the kind stays as it is.
-  if (name.toLocaleLowerCase('cs').includes(kind.trim().toLocaleLowerCase('cs'))) return name;
+  const lowerKind = kind.trim().toLocaleLowerCase('cs');
+  const lowerName = name.toLocaleLowerCase('cs');
+  // "Paletový" + "Regál" → "Paletový regál"; a name already containing the kind stays as it is,
+  // a kind already containing the name ("Policový regál" from an older merge) too.
+  if (lowerName.includes(lowerKind)) return name;
+  if (lowerKind.includes(lowerName)) return kind.trim();
   const rest = name.charAt(0).toLocaleLowerCase('cs') + name.slice(1);
   return `${kind.trim()} ${rest}`;
 }

@@ -24,6 +24,8 @@ import {
   itemTypeLabel,
   type Item,
   type ItemStatus,
+  convertCell,
+  type FieldDefinition,
 } from '@revize/shared';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -44,6 +46,7 @@ import { DateField } from '../components/DateField.js';
 import { DatabaseExportMenu } from '../components/DatabaseExportMenu.js';
 import { ItemHistory } from '../components/ItemHistory.js';
 import { PrevNext } from '../components/PrevNext.js';
+import { ValueInput } from '../components/ImportFieldValues.js';
 
 const PAGE_SIZE = 100;
 
@@ -55,19 +58,26 @@ const SORT_OPTIONS = [
   { value: 'updated', label: 'Naposledy změněné' },
 ];
 
-type BulkAction = 'move' | 'status' | 'nextInspection' | 'retire' | null;
+type BulkAction = 'move' | 'status' | 'nextInspection' | 'retire' | 'field' | null;
 
 function BulkDialog({
   action,
   ids,
   siteId,
+  fields,
   onDone,
 }: {
   action: Exclude<BulkAction, null>;
   ids: string[];
   siteId: string | undefined;
+  /** "Nastavit údaj": the type fields all the selected items have. */
+  fields: FieldDefinition[];
   onDone: () => void;
 }) {
+  const [fieldKey, setFieldKey] = useState<string | null>(fields[0]?.key ?? null);
+  const [fieldValue, setFieldValue] = useState('');
+  const [onlyEmpty, setOnlyEmpty] = useState(true);
+  const field = fields.find((f) => f.key === fieldKey);
   const bulk = useBulkUpdateItems();
   const locations = useLocations(siteId);
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -77,6 +87,19 @@ function BulkDialog({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (action === 'field') {
+      if (!field) return;
+      // Typed like a cell of an import: "ano", "150", "Paletový" → the field's kind.
+      const converted = fieldValue.trim() ? convertCell(field, fieldValue.trim()).value : null;
+      bulk.mutate(
+        { ids, set: { fieldValues: { [field.key]: converted } }, onlyEmpty },
+        {
+          onSuccess: (r) => (notifySaved(`Upraveno ${r.updated} artiklů`), onDone()),
+          onError: notifyError,
+        },
+      );
+      return;
+    }
     const set =
       action === 'move'
         ? { locationId }
@@ -137,6 +160,39 @@ function BulkDialog({
         {action === 'nextInspection' && (
           <DateField label="Datum příští kontroly" value={date} onChange={setDate} />
         )}
+        {action === 'field' &&
+          (fields.length ? (
+            <>
+              <Select
+                label="Údaj"
+                data={fields.map((f) => ({ value: f.key, label: f.label }))}
+                value={fieldKey}
+                allowDeselect={false}
+                onChange={(v) => {
+                  setFieldKey(v);
+                  setFieldValue('');
+                }}
+              />
+              {field && (
+                <ValueInput
+                  field={field}
+                  label="Hodnota"
+                  placeholder="prázdné = smazat"
+                  value={fieldValue}
+                  onChange={setFieldValue}
+                />
+              )}
+              <Checkbox
+                label="Jen u artiklů, kde údaj chybí"
+                checked={onlyEmpty}
+                onChange={(e) => setOnlyEmpty(e.currentTarget.checked)}
+              />
+            </>
+          ) : (
+            <Text c="red" size="sm">
+              Vybrané artikly nemají společný údaj – vyberte artikly jednoho typu.
+            </Text>
+          ))}
         {action === 'retire' && (
           <Text size="sm">
             Artikly se vyřadí z evidence – nebudou se kontrolovat, ale zůstanou v historii.
@@ -190,6 +246,19 @@ export function ItemsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   useEffect(() => setSelected(new Set()), [search]);
   const rows = items.data?.items ?? [];
+  // Type fields every selected item has (for "Nastavit údaj").
+  const commonFields = useMemo(() => {
+    const typeIds = [
+      ...new Set(rows.filter((r) => selected.has(r.id)).map((r) => r.equipmentTypeId)),
+    ];
+    const selectedTypes = typeIds.map((id) => types.data?.find((t) => t.id === id));
+    if (!selectedTypes.length || selectedTypes.some((t) => !t)) return [];
+    const [first, ...others] = selectedTypes as NonNullable<(typeof selectedTypes)[number]>[];
+    return first!.fieldDefinitions
+      .filter((f) => !f.archived)
+      .filter((f) => others.every((t) => t.fieldDefinitions.some((o) => o.key === f.key)))
+      .sort((a, b) => a.order - b.order);
+  }, [rows, selected, types.data]);
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const toggle = (id: string) =>
     setSelected((s) => {
@@ -367,6 +436,9 @@ export function ItemsPage() {
             <Button size="xs" variant="default" onClick={() => setBulkAction('nextInspection')}>
               Příští kontrola…
             </Button>
+            <Button size="xs" variant="default" onClick={() => setBulkAction('field')}>
+              Nastavit údaj…
+            </Button>
             <Button size="xs" variant="default" color="red" onClick={() => setBulkAction('retire')}>
               Vyřadit z evidence…
             </Button>
@@ -518,7 +590,9 @@ export function ItemsPage() {
               ? 'Změnit stav'
               : bulkAction === 'nextInspection'
                 ? 'Datum příští kontroly'
-                : 'Vyřadit z evidence'
+                : bulkAction === 'field'
+                  ? 'Nastavit údaj'
+                  : 'Vyřadit z evidence'
         }
       >
         {bulkAction && (
@@ -526,6 +600,7 @@ export function ItemsPage() {
             action={bulkAction}
             ids={[...selected]}
             siteId={search.siteId}
+            fields={commonFields}
             onDone={() => {
               setBulkAction(null);
               setSelected(new Set());

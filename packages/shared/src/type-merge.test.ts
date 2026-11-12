@@ -19,9 +19,26 @@ describe('merging equipment types', () => {
     expect(kindValueOf('Regál paletový', 'Regál')).toBe('Paletový');
     expect(kindValueOf('Regál – konzolový', 'Regál')).toBe('Konzolový');
     expect(kindValueOf('Regál', 'Regál')).toBe('Regál');
-    expect(kindValueOf('Policový regál', 'Regál')).toBe('Policový regál');
+    expect(kindValueOf('Policový regál', 'Regál')).toBe('Policový');
+    expect(kindValueOf('Ruční vozík', 'Regál')).toBe('Ruční vozík');
     expect(commonLeadingWords(['Regál paletový', 'Regál policový', 'Regál'])).toBe('');
     expect(commonLeadingWords(['Regál paletový', 'regál policový'])).toBe('Regál');
+  });
+
+  it('gives the kind also to the items of a target named "Paletový regál"', () => {
+    const plan = planTypeMerge(
+      { id: 't', name: 'Paletový regál', fieldDefinitions: [] },
+      [
+        { id: 's', name: 'Policový regál', fieldDefinitions: [] },
+        { id: 'c', name: 'Regál konzolový', fieldDefinitions: [] },
+      ],
+      { name: 'Paletový regál', kindField: { key: 'rack_type', label: 'Typ regálu' } },
+    );
+    expect(plan.kindValues).toEqual({
+      'Paletový regál': 'Paletový',
+      'Policový regál': 'Policový',
+      'Regál konzolový': 'Konzolový',
+    });
   });
 
   it("keeps the target's fields, adds missing ones and the former type", () => {

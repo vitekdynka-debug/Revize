@@ -71,3 +71,40 @@ it('takes a field edit without a version (only changed fields, later wins)', asy
   });
   expect(stale.statusCode).toBe(409);
 });
+
+it('sets a field on many items at once, only where it is empty', async () => {
+  const customers = (await api('GET', '/api/customers')).json<{ id: string }[]>();
+  const siteId = (await api('GET', `/api/customers/${customers[0]!.id}/sites`)).json<
+    { id: string }[]
+  >()[0]!.id;
+  const types = (await api('GET', '/api/equipment-types')).json<{ id: string; name: string }[]>();
+  const ladder = types.find((t) => t.name === 'Žebřík')!.id;
+  const make = async (number: string, values: Record<string, unknown>) =>
+    (
+      await api('POST', '/api/items', {
+        siteId,
+        locationId: null,
+        equipmentTypeId: ladder,
+        itemNumber: number,
+        fieldValues: values,
+      })
+    ).json<{ id: string }>();
+  const empty = await make('8811', { manufacturer: 'Alve' });
+  const filled = await make('8812', { manufacturer: 'Alve', ladder_type: 'Víceúčelový' });
+  const done = await api('POST', '/api/items/bulk-update', {
+    ids: [empty.id, filled.id],
+    set: { fieldValues: { ladder_type: 'Opěrný' } },
+    onlyEmpty: true,
+  });
+  expect(done.statusCode, done.body).toBe(200);
+  expect(done.json().updated).toBe(1);
+  const get = async (id: string) => (await api('GET', `/api/items/${id}`)).json();
+  expect((await get(empty.id)).fieldValues.ladder_type).toBe('Opěrný');
+  expect((await get(filled.id)).fieldValues.ladder_type).toBe('Víceúčelový');
+  // A field the item's type does not have is refused.
+  const wrong = await api('POST', '/api/items/bulk-update', {
+    ids: [empty.id],
+    set: { fieldValues: { rack_type: 'Paletový' } },
+  });
+  expect(wrong.statusCode).toBe(400);
+});

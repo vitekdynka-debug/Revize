@@ -369,8 +369,12 @@ export const bulkUpdateItemsSchema = z.object({
       status: z.enum(ITEM_STATUSES),
       nextInspectionDate: isoDate.nullable(),
       retired: z.boolean(),
+      /** Values of type fields set on every item (each item's type must have the field). */
+      fieldValues: z.record(z.string(), z.unknown()),
     })
     .partial()
     .refine((v) => Object.keys(v).length > 0, 'Vyberte, co se má změnit'),
   reason: z.string().trim().max(500).optional(),
+  /** With `set.fieldValues`: only items whose field is empty get the value. */
+  onlyEmpty: z.boolean().optional(),
 });

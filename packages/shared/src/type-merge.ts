@@ -55,13 +55,25 @@ export function commonLeadingWords(names: readonly string[]): string {
   return common.join(' ');
 }
 
-/** "Regál paletový" with the base "Regál" → "Paletový"; otherwise the whole name. */
+/** The words every name ends with: ["Paletový regál", "Policový regál"] → "regál". */
+export function commonTrailingWords(names: readonly string[]): string {
+  const reversed = names.map((n) => n.trim().split(/\s+/).reverse().join(' '));
+  return commonLeadingWords(reversed).split(' ').reverse().join(' ');
+}
+
+/**
+ * The kind of a type within the merged one: "Regál paletový" with the base "Regál" →
+ * "Paletový", "Paletový regál" → "Paletový" too; otherwise the whole name.
+ */
 export function kindValueOf(typeName: string, base: string): string {
   const name = typeName.trim();
-  const prefix = base.trim().toLocaleLowerCase('cs');
+  const word = base.trim().toLocaleLowerCase('cs');
+  const lower = name.toLocaleLowerCase('cs');
   let rest = name;
-  if (prefix && name.toLocaleLowerCase('cs').startsWith(prefix)) {
-    rest = name.slice(prefix.length).replace(/^[\s\-–:,]+/, '');
+  if (word && lower.startsWith(word)) {
+    rest = name.slice(word.length).replace(/^[\s\-–:,]+/, '');
+  } else if (word && lower.endsWith(word)) {
+    rest = name.slice(0, name.length - word.length).replace(/[\s\-–:,]+$/, '');
   }
   if (!rest) return name;
   return rest.charAt(0).toLocaleUpperCase('cs') + rest.slice(1);
@@ -78,9 +90,15 @@ export function planTypeMerge(
   conflicts: string[];
   kindValues: Record<string, string>;
 } {
-  // "Regál paletový", "Regál policový" → base "Regál": the words all the names start with.
+  // "Regál paletový", "Regál policový" → base "Regál": the words all the names start (or end)
+  // with; "Paletový regál" and "Regál konzolový" share "regál" as a word anywhere.
+  const names = [target, ...sources].map((t) => t.name);
   const base =
-    commonLeadingWords([target, ...sources].map((t) => t.name)) || options.name || target.name;
+    commonLeadingWords(names) ||
+    commonTrailingWords(names) ||
+    sharedWord(names) ||
+    options.name ||
+    target.name;
   const fields: FieldDefinition[] = target.fieldDefinitions.map((f) => ({ ...f }));
   const addedFields: string[] = [];
   const conflicts: string[] = [];
@@ -130,4 +148,14 @@ export function planTypeMerge(
     }
   }
   return { fieldDefinitions: fields, addedFields, conflicts, kindValues };
+}
+
+/** A word every name contains ("regál" in "Paletový regál" and "Regál konzolový"). */
+function sharedWord(names: readonly string[]): string {
+  const words = names.map(
+    (n) => new Set(n.trim().toLocaleLowerCase('cs').split(/\s+/).filter(Boolean)),
+  );
+  const [first, ...rest] = words;
+  for (const word of first ?? []) if (rest.every((w) => w.has(word))) return word;
+  return '';
 }

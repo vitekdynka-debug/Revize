@@ -606,16 +606,47 @@ export function createItemsService(db: Db) {
           .from(item)
           .where(and(eq(item.organizationId, auth.organizationId), inArray(item.id, input.ids)));
         if (rows.length !== new Set(input.ids).size) throw notFound('Některé artikly neexistují.');
+        const { fieldValues: setValues, ...set } = input.set;
+        let updated = 0;
         for (const current of rows) {
+          let fieldValues: Record<string, unknown> | undefined;
+          if (setValues) {
+            const type = await typeOf(tx, auth, current.equipmentTypeId, true);
+            const keys = new Set(
+              type.fieldDefinitions.filter((f) => !f.archived).map((f) => f.key),
+            );
+            const unknown = Object.keys(setValues).find((key) => !keys.has(key));
+            if (unknown) {
+              throw validationError([
+                {
+                  path: ['set', 'fieldValues', unknown],
+                  message: `Typ „${type.name}“ toto pole nemá – vyberte artikly jednoho typu`,
+                },
+              ]);
+            }
+            const empty = (value: unknown) =>
+              value === undefined ||
+              value === null ||
+              value === '' ||
+              (Array.isArray(value) && value.length === 0);
+            const applied = Object.fromEntries(
+              Object.entries(setValues).filter(
+                ([key]) => !input.onlyEmpty || empty(current.fieldValues[key]),
+              ),
+            );
+            if (Object.keys(applied).length) fieldValues = { ...current.fieldValues, ...applied };
+          }
+          if (!fieldValues && Object.keys(set).length === 0) continue;
           await applyUpdate(
             tx,
             auth,
             current,
-            { ...input.set, reason: input.reason },
+            { ...set, ...(fieldValues ? { fieldValues } : {}), reason: input.reason },
             current.version,
           );
+          updated += 1;
         }
-        return { updated: rows.length };
+        return { updated };
       });
     },
   };

@@ -180,5 +180,7 @@ describe('itemTypeLabel', () => {
       'Paletový regál',
     );
     expect(itemTypeLabel(undefined, {})).toBe('?');
+    // A kind stored whole by an older merge ("Policový regál") is not repeated.
+    expect(itemTypeLabel(rack, { rack_type: 'Policový regál' })).toBe('Policový regál');
   });
 });
