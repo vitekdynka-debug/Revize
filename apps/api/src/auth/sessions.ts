@@ -50,6 +50,7 @@ export async function resolveSession(
       userId: appUser.id,
       organizationId: appUser.organizationId,
       role: appUser.role,
+      extraPermissions: appUser.extraPermissions,
     })
     .from(session)
     .innerJoin(appUser, eq(appUser.id, session.userId))
@@ -74,7 +75,7 @@ export async function resolveSession(
     userId: row.userId,
     organizationId: row.organizationId,
     role,
-    permissions: permissionsOf(role),
+    permissions: permissionsOf(role, row.extraPermissions),
     sessionId: row.sessionId,
     via,
   };

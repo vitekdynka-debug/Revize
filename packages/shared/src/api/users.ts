@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { ROLES } from '../permissions.js';
+import { PERMISSIONS, ROLES } from '../permissions.js';
+
+/** Permissions on top of the role (ADR-0022). */
+export const extraPermissionsSchema = z.array(z.enum(PERMISSIONS)).max(PERMISSIONS.length);
 import { emailSchema, passwordSchema } from './auth.js';
 import { certificationSchema, certificationsSchema } from './common.js';
 import { idSchema } from './common.js';
@@ -15,6 +18,8 @@ export const userSchema = z.object({
   certification: z.string(),
   /** Authorization per equipment type (type id → text), printed in protocols of that type. */
   certifications: z.record(z.string(), z.string()),
+  /** Given on top of the role (e.g. a technician who manages customers). */
+  extraPermissions: z.array(z.string()),
   createdAt: z.string(),
   version: z.number().int(),
 });
@@ -29,6 +34,7 @@ export const createUserRequestSchema = z.object({
   password: passwordSchema,
   certification: certificationSchema.default(''),
   certifications: certificationsSchema.default({}),
+  extraPermissions: extraPermissionsSchema.default([]),
 });
 
 export const updateUserRequestSchema = z
@@ -38,6 +44,7 @@ export const updateUserRequestSchema = z
     active: z.boolean(),
     certification: certificationSchema,
     certifications: certificationsSchema,
+    extraPermissions: extraPermissionsSchema,
     /** Admin password reset; ends all sessions of the user. */
     password: passwordSchema,
     /** Optimistic locking: the version the client edited. */

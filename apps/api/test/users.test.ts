@@ -178,3 +178,48 @@ describe('users', () => {
     expect(JSON.stringify(entries)).not.toContain('argon2');
   });
 });
+
+describe('permissions on top of the role (ADR-0022)', () => {
+  it('lets a technician manage customers when given that', async () => {
+    const created = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/users',
+      headers: bearer(adminToken),
+      payload: {
+        email: 'vedouci@test.cz',
+        displayName: 'Vedoucí technik',
+        role: 'inspector',
+        password: 'technik-heslo-1',
+        extraPermissions: ['customer.read', 'customer.write'],
+      },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    expect(created.json().extraPermissions).toEqual(['customer.read', 'customer.write']);
+    const { token } = await ctx.login('vedouci@test.cz', 'technik-heslo-1');
+    const me = await ctx.app.inject({ method: 'GET', url: '/api/auth/me', headers: bearer(token) });
+    expect(me.json().permissions).toContain('customer.write');
+    const customer = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/customers',
+      headers: bearer(token),
+      payload: { name: 'Nový zákazník' },
+    });
+    expect(customer.statusCode, customer.body).toBe(201);
+    // Not given: equipment types stay read-only for the technician.
+    const type = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/equipment-types',
+      headers: bearer(token),
+      payload: { presetKey: 'rack' },
+    });
+    expect(type.statusCode).toBe(403);
+    // Unknown permissions are refused.
+    const wrong = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/users/${created.json().id}`,
+      headers: bearer(adminToken),
+      payload: { version: created.json().version, extraPermissions: ['everything'] },
+    });
+    expect(wrong.statusCode).toBe(400);
+  });
+});

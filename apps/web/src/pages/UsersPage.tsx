@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Checkbox,
   Group,
   Modal,
   PasswordInput,
@@ -14,7 +15,15 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { CertificationFields } from '../components/CertificationFields.js';
-import { ROLES, ROLE_LABELS, type Role, type User } from '@revize/shared';
+import {
+  PERMISSION_GROUPS,
+  ROLES,
+  ROLE_LABELS,
+  ROLE_PERMISSIONS,
+  type Permission,
+  type Role,
+  type User,
+} from '@revize/shared';
 import { useState, type FormEvent } from 'react';
 import type { ApiRequestError } from '../api/client.js';
 import { useCreateUser, useDeleteUser, useMe, useUpdateUser, useUsers } from '../api/hooks.js';
@@ -35,6 +44,21 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
   const [active, setActive] = useState(user?.active ?? true);
   const [certification, setCertification] = useState(user?.certification ?? '');
   const [certifications, setCertifications] = useState(user?.certifications ?? {});
+  const [extraPermissions, setExtraPermissions] = useState<string[]>(user?.extraPermissions ?? []);
+  const groupOn = (group: (typeof PERMISSION_GROUPS)[number]) =>
+    group.permissions.every(
+      (p) => ROLE_PERMISSIONS[role].includes(p) || extraPermissions.includes(p),
+    );
+  const toggleGroup = (group: (typeof PERMISSION_GROUPS)[number], on: boolean) =>
+    setExtraPermissions((current) => {
+      const own = new Set<string>(ROLE_PERMISSIONS[role]);
+      const next = new Set(current);
+      for (const p of group.permissions) {
+        if (on && !own.has(p)) next.add(p);
+        if (!on) next.delete(p);
+      }
+      return [...next];
+    });
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -55,12 +79,24 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           active,
           certification,
           certifications,
+          extraPermissions: role === 'admin' ? [] : (extraPermissions as Permission[]),
           ...(password ? { password } : {}),
         },
         done,
       );
     } else {
-      create.mutate({ email, displayName, role, password, certification, certifications }, done);
+      create.mutate(
+        {
+          email,
+          displayName,
+          role,
+          password,
+          certification,
+          certifications,
+          extraPermissions: role === 'admin' ? [] : (extraPermissions as Permission[]),
+        },
+        done,
+      );
     }
   };
 
@@ -97,6 +133,26 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           allowDeselect={false}
           onChange={(v) => setRole((v as Role) ?? 'inspector')}
         />
+        {role !== 'admin' && (
+          <Stack gap={6} data-testid="extra-permissions">
+            <Text size="sm" fw={500}>
+              Oprávnění navíc
+            </Text>
+            <Text size="xs" c="dimmed" mt={-4}>
+              Technik kontroluje v terénu, zakládá a upravuje artikly a importuje. Navíc mu jde
+              svěřit tyto oblasti kanceláře:
+            </Text>
+            {PERMISSION_GROUPS.map((group) => (
+              <Checkbox
+                key={group.key}
+                label={group.label}
+                description={group.description}
+                checked={groupOn(group)}
+                onChange={(e) => toggleGroup(group, e.currentTarget.checked)}
+              />
+            ))}
+          </Stack>
+        )}
         {user && (
           <Switch
             label="Aktivní (může se přihlásit)"
@@ -181,7 +237,19 @@ export function UsersPage() {
             <Table.Tr key={user.id} onClick={() => openFor(user)} style={{ cursor: 'pointer' }}>
               <Table.Td>{user.displayName}</Table.Td>
               <Table.Td>{user.email}</Table.Td>
-              <Table.Td>{ROLE_LABELS[user.role]}</Table.Td>
+              <Table.Td>
+                {ROLE_LABELS[user.role]}
+                {user.role !== 'admin' && user.extraPermissions.length > 0 && (
+                  <Text size="xs" c="dimmed">
+                    +{' '}
+                    {PERMISSION_GROUPS.filter((g) =>
+                      g.permissions.some((p) => user.extraPermissions.includes(p)),
+                    )
+                      .map((g) => g.label)
+                      .join(', ')}
+                  </Text>
+                )}
+              </Table.Td>
               <Table.Td>
                 {user.active ? (
                   <Badge color="green">aktivní</Badge>

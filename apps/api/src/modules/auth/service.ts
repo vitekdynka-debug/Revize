@@ -29,7 +29,7 @@ export function toCurrentUser(row: UserRow): CurrentUser {
     displayName: row.displayName,
     role,
     organizationId: row.organizationId,
-    permissions: [...permissionsOf(role)],
+    permissions: [...permissionsOf(role, row.extraPermissions)],
     certification: row.certification,
     certifications: row.certifications,
   };

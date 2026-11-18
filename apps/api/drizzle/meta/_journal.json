@@ -134,6 +134,13 @@
       "when": 1795011994222,
       "tag": "0018_checked_at",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795013586387,
+      "tag": "0019_extra_permissions",
+      "breakpoints": true
     }
   ]
 }

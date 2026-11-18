@@ -162,4 +162,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   `inspection_result.checks`; field card ANO/NE (NE → defect text + at least the point's level,
   `withCheckText`/`checksSeverity` in `packages/shared/src/checklist.ts`); office editor
   `ChecklistEditor`. Lists show the kind before the type (`itemTypeLabel`); bulk "Nastavit údaj".
+- Extra permissions (ADR-0022): `app_user.extra_permissions` on top of the role
+  (`permissionsOf(role, extra)`), offered by area in the user form (`PERMISSION_GROUPS`).
+  Results keep `checked_at` (first recording; office restamps only when asked); protocol lists
+  the check days, appendix always has "Datum kontroly"; exports project the next date before closing.
 - Next: M1 decision PWA vs Capacitor.

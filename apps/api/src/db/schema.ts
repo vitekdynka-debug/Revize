@@ -53,6 +53,8 @@ export const appUser = pgTable(
     displayName: text('display_name').notNull(),
     role: text('role').notNull(),
     active: boolean('active').notNull().default(true),
+    /** Permissions on top of the role (ADR-0022), e.g. a technician managing customers. */
+    extraPermissions: jsonb('extra_permissions').$type<string[]>().notNull().default([]),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     /** The technician's authorization, e.g. "Osvědčení č. 123/2024" (under the protocol signature). */
     certification: text('certification').notNull().default(''),
