@@ -64,10 +64,14 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
 
   // The Export menu says how many photos the ZIP will contain.
   await page.getByRole('button', { name: 'Export' }).click();
-  await expect(page.getByTestId('zip-count')).toHaveText('1 fotek');
+  await expect(page.getByTestId('zip-count-all')).toHaveText('1 fotek');
+  await expect(page.getByTestId('zip-count-defects')).toHaveText('1 fotek');
+  // Nothing of the items themselves: that choice is off.
+  await expect(page.getByTestId('zip-count-items')).toHaveText('0 fotek');
+  await expect(page.getByRole('menuitem', { name: /Jen fotky artiklů/ })).toBeDisabled();
   // Downloaded through the browser like a user does, the ZIP has the photo and its list.
   const zipDownload = page.waitForEvent('download');
-  await page.getByRole('menuitem', { name: /Fotky \(ZIP/ }).click();
+  await page.getByRole('menuitem', { name: /Jen fotky závad/ }).click();
   const zipPath = await (await zipDownload).path();
   const zip = unzipSync(new Uint8Array(readFileSync(zipPath)));
   expect(Object.keys(zip).sort()).toEqual(['30002_01.jpg', 'fotky.csv']);

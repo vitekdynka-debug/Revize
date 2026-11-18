@@ -351,7 +351,10 @@ export const useClosePreview = (inspectionId: string) =>
     queryFn: () => api.get(`/inspections/${inspectionId}/close-preview`),
   });
 export const usePhotosList = (inspectionId: string, enabled: boolean) =>
-  useQuery<{ files: { fileName: string; exists: boolean }[] }, ApiRequestError>({
+  useQuery<
+    { files: { fileName: string; exists: boolean; kind: 'defect' | 'item' | 'inspection' }[] },
+    ApiRequestError
+  >({
     queryKey: ['photos-list', inspectionId],
     queryFn: () => api.get(`/inspections/${inspectionId}/photos-list`),
     enabled,

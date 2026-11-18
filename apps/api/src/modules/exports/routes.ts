@@ -56,7 +56,13 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
         params,
         response: {
           200: z.object({
-            files: z.array(z.object({ fileName: z.string(), exists: z.boolean() })),
+            files: z.array(
+              z.object({
+                fileName: z.string(),
+                exists: z.boolean(),
+                kind: z.enum(['defect', 'item', 'inspection']),
+              }),
+            ),
           }),
         },
       },
@@ -71,9 +77,14 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
         tags,
         summary: 'Fotky kontroly v ZIP (názvy podle čísla TZ, popis v EXIF/IPTC, fotky.csv)',
         params,
+        querystring: z.object({
+          /** Just the defect photos, or just the photos of the items (nameplate, overview). */
+          only: z.enum(['defects', 'items']).optional(),
+        }),
       },
     },
-    async (req, reply) => send(reply, await exports.photosZip(authOf(req), req.params.id)),
+    async (req, reply) =>
+      send(reply, await exports.photosZip(authOf(req), req.params.id, req.query.only)),
   );
 
   const databaseQuery = z.object({

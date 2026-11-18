@@ -6,6 +6,32 @@ import { downloadFile } from '../api/client.js';
 import { usePhotosList } from '../api/hooks.js';
 import { notifyError } from '../lib/notify.js';
 
+/** Which photos a ZIP holds: all, only those of the defects, only those of the items. */
+type PhotoKind = 'defect' | 'item' | 'inspection';
+const PHOTO_SETS: {
+  key: string;
+  label: string;
+  query: 'defects' | 'items' | null;
+  suffix: string;
+  kinds: readonly PhotoKind[];
+}[] = [
+  {
+    key: 'all',
+    label: 'Všechny fotky',
+    query: null,
+    suffix: '',
+    kinds: ['defect', 'item', 'inspection'],
+  },
+  {
+    key: 'defects',
+    label: 'Jen fotky závad',
+    query: 'defects',
+    suffix: '-zavady',
+    kinds: ['defect'],
+  },
+  { key: 'items', label: 'Jen fotky artiklů', query: 'items', suffix: '-artikly', kinds: ['item'] },
+];
+
 /** Downloads of an inspection: results (XLSX, CSV) and photos (ZIP). */
 export function ExportMenu({ inspection }: { inspection: Inspection }) {
   const [busy, setBusy] = useState(false);
@@ -13,7 +39,6 @@ export function ExportMenu({ inspection }: { inspection: Inspection }) {
   // What the server will put into the ZIP (fetched when the menu opens).
   const list = usePhotosList(inspection.id, opened);
   const photoFiles = list.data?.files;
-  const missing = photoFiles?.filter((f) => !f.exists).length ?? 0;
   const base = `${fileNamePart(inspection.siteName)}-${inspection.inspectionDate}`;
   const download = (path: string, fileName: string) => {
     setBusy(true);
@@ -41,17 +66,35 @@ export function ExportMenu({ inspection }: { inspection: Inspection }) {
         >
           Výsledky – CSV
         </Menu.Item>
-        <Menu.Item
-          leftSection={<IconPhoto size={16} />}
-          onClick={() => download('photos.zip', `fotky-${base}.zip`)}
-        >
-          Fotky (ZIP s popisy)
-          <Text size="xs" c={missing ? 'red' : 'dimmed'} data-testid="zip-count">
-            {photoFiles === undefined
-              ? 'zjišťuji počet…'
-              : `${photoFiles.length} fotek${missing ? `, ${missing} chybí na serveru` : ''}`}
-          </Text>
-        </Menu.Item>
+        <Menu.Label>Fotky (ZIP s popisy)</Menu.Label>
+        {PHOTO_SETS.map((set) => {
+          const chosen = photoFiles?.filter((f) => set.kinds.includes(f.kind));
+          const missingHere = chosen?.filter((f) => !f.exists).length ?? 0;
+          return (
+            <Menu.Item
+              key={set.key}
+              leftSection={<IconPhoto size={16} />}
+              disabled={chosen !== undefined && chosen.length === 0}
+              onClick={() =>
+                download(
+                  set.query ? `photos.zip?only=${set.query}` : 'photos.zip',
+                  `fotky${set.suffix}-${base}.zip`,
+                )
+              }
+            >
+              {set.label}
+              <Text
+                size="xs"
+                c={missingHere ? 'red' : 'dimmed'}
+                data-testid={`zip-count-${set.key}`}
+              >
+                {chosen === undefined
+                  ? 'zjišťuji počet…'
+                  : `${chosen.length} fotek${missingHere ? `, ${missingHere} chybí na serveru` : ''}`}
+              </Text>
+            </Menu.Item>
+          );
+        })}
       </Menu.Dropdown>
     </Menu>
   );

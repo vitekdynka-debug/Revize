@@ -164,6 +164,10 @@ export function createExportsService(
     return { inspection, items, types, photos, photosOf };
   }
 
+  /** A defect photo (of a result), a photo of the item itself, or of the whole inspection. */
+  const photoKind = (p: ExportPhoto): 'defect' | 'item' | 'inspection' =>
+    p.itemPhoto ? 'item' : p.item ? 'defect' : 'inspection';
+
   const baseName = (inspection: Inspection) =>
     `kontrola-${fileNamePart(inspection.siteName)}-${inspection.inspectionDate}`;
 
@@ -477,23 +481,32 @@ export function createExportsService(
     async photosList(
       auth: AuthContext,
       inspectionId: string,
-    ): Promise<{ files: { fileName: string; exists: boolean }[] }> {
+    ): Promise<{
+      files: { fileName: string; exists: boolean; kind: 'defect' | 'item' | 'inspection' }[];
+    }> {
       const { photos } = await load(auth, inspectionId);
       return {
         files: await Promise.all(
           photos.map(async (p) => ({
             fileName: p.fileName,
             exists: await files.exists(p.storageKey),
+            kind: photoKind(p),
           })),
         ),
       };
     },
 
+    /** `only`: just the defect photos, or just the photos of the items (nameplate, overview). */
     async photosZip(
       auth: AuthContext,
       inspectionId: string,
+      only?: 'defects' | 'items',
     ): Promise<ExportFile<ReadableStream<Uint8Array>>> {
-      const { inspection, types, photos } = await load(auth, inspectionId);
+      const loaded = await load(auth, inspectionId);
+      const { inspection, types } = loaded;
+      const photos = only
+        ? loaded.photos.filter((p) => photoKind(p) === (only === 'defects' ? 'defect' : 'item'))
+        : loaded.photos;
       console.info(`photos.zip: inspection ${inspectionId}: ${photos.length} photos`);
       const org = await organizationOf(db, auth);
       const typeName = (item: InspectionItem) =>
@@ -610,7 +623,7 @@ export function createExportsService(
       });
       return {
         data: stream,
-        fileName: `fotky-${baseName(inspection).replace(/^kontrola-/, '')}.zip`,
+        fileName: `fotky${only === 'defects' ? '-zavady' : only === 'items' ? '-artikly' : ''}-${baseName(inspection).replace(/^kontrola-/, '')}.zip`,
         contentType: 'application/zip',
       };
     },

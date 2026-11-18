@@ -212,4 +212,6 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
         fotky artiklů (`10001_artikl_01.jpg`),
         fotky kontroly (`kontrola_01.jpg`) a seznam `fotky.csv`. Popis (artikl, umístění,
         závada, technik) je zapsaný přímo ve fotce (EXIF/IPTC), takže ho ukáže i prohlížeč fotek.
-        V ukázce na GitHub Pages fotky popis nemají.
+        V ukázce na GitHub Pages fotky popis nemají. Volby _Všechny fotky_, _Jen fotky závad_
+        (`fotky-zavady-….zip`) a _Jen fotky artiklů_ (`fotky-artikly-….zip`) ukazují počet fotek;
+        prázdná volba je zašedlá.

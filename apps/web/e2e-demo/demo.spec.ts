@@ -97,6 +97,6 @@ test('demo field mode: a technician records results and photos in the browser', 
   // Photos as a ZIP also in the browser (without EXIF/IPTC, no ExifTool there).
   const zip = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export' }).click();
-  await page.getByRole('menuitem', { name: 'Fotky (ZIP s popisy)' }).click();
-  expect((await zip).suggestedFilename()).toMatch(/^fotky-.+\.zip$/);
+  await page.getByRole('menuitem', { name: /Jen fotky závad/ }).click();
+  expect((await zip).suggestedFilename()).toMatch(/^fotky-zavady-.+\.zip$/);
 });

@@ -287,6 +287,22 @@ describe('inspection exports', () => {
       new Uint8Array((await api('GET', `/api/inspections/${id}/photos.zip`)).rawPayload),
     );
     expect(Object.keys(zip)).toContain(`${items[1]!.itemNumber}_artikl_01.jpg`);
+    // Only the photos of the items, or only those of the defects.
+    const onlyItems = await api('GET', `/api/inspections/${id}/photos.zip?only=items`);
+    expect(onlyItems.headers['content-disposition']).toMatch(/fotky-artikly-/);
+    const itemFiles = Object.keys(unzipSync(new Uint8Array(onlyItems.rawPayload)));
+    expect(itemFiles.filter((f) => f.endsWith('.jpg'))).toEqual([
+      `${items[1]!.itemNumber}_artikl_01.jpg`,
+    ]);
+    const defectFiles = Object.keys(
+      unzipSync(
+        new Uint8Array(
+          (await api('GET', `/api/inspections/${id}/photos.zip?only=defects`)).rawPayload,
+        ),
+      ),
+    );
+    expect(defectFiles.some((f) => f.includes('_artikl_'))).toBe(false);
+    expect(defectFiles.some((f) => f.endsWith('.jpg'))).toBe(true);
   });
 
   it('exports the whole database as CSV and XLSX with the last inspection result', async () => {
