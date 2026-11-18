@@ -1,3 +1,4 @@
+import { drawMarks, type PhotoMark } from './marks.js';
 import { rotatedSize, type CropRect, type Rotation } from './crop.js';
 
 export interface ResizedImage {
@@ -80,7 +81,7 @@ export async function coverJpeg(
  */
 export async function editToJpeg(
   source: Blob,
-  edit: { rotation: Rotation; crop: CropRect },
+  edit: { rotation: Rotation; crop: CropRect; marks?: readonly PhotoMark[] },
   maxSize: number,
   quality: number,
 ): Promise<Blob> {
@@ -101,6 +102,18 @@ export async function editToJpeg(
     context.translate(turned.width / 2, turned.height / 2);
     context.rotate((edit.rotation * Math.PI) / 180);
     context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+    if (edit.marks?.length) {
+      // Marks are in the turned image: the same scale and cut-out, without the rotation.
+      context.setTransform(
+        scale,
+        0,
+        0,
+        scale,
+        -edit.crop.x * turned.width * scale,
+        -edit.crop.y * turned.height * scale,
+      );
+      drawMarks(context, edit.marks, turned.width, turned.height);
+    }
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, 'image/jpeg', quality),
     );

@@ -109,6 +109,9 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
   u artiklu i pro další kontroly.
 - Hned po vyfocení se otevře **Upravit fotku**: tlačítky **Doleva** / **Doprava** fotku otočíte
   o 90°, tažením rohů ji oříznete (tažením uprostřed výřez posunete), **Celá** výřez zruší.
+  **Šipka** a **Kolečko** přidají červenou značku, kterou ukážete na závadu: značku posunete
+  tažením, bílým bodem změníte směr a délku šipky nebo velikost kolečka, **Smazat značku** odebere
+  vybranou. Značky se vykreslí přímo do fotky (protokol, ZIP, kancelář).
   **Uložit fotku** ji teprve uloží do zařízení, **Zahodit** ji zahodí. Úprava se provede
   na původní fotce, kvalita se tím nesnižuje.
 - **Upravit údaje** (vpravo nahoře na kartě) otevře formulář artiklu: číslo TZ, označení, QR kód,

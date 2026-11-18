@@ -1,6 +1,7 @@
 import { PHOTO_LIMITS } from '@revize/shared';
 import { FULL_CROP, isFullCrop, type CropRect, type Rotation } from '../lib/crop.js';
 import { editToJpeg, resizeToJpeg } from '../lib/images.js';
+import type { PhotoMark } from '../lib/marks.js';
 
 /**
  * Photos leave the device as JPEG with the longer side at most this size (ADR-0007): the size
@@ -32,10 +33,12 @@ export function pickPhoto(): Promise<File | null> {
   });
 }
 
-/** Turn and cut-out chosen in the photo editor. */
+/** Turn, cut-out and red marks (arrow, circle) chosen in the photo editor. */
 export interface PhotoEdit {
   rotation: Rotation;
   crop: CropRect;
+  /** Drawn into the photo, pointing at the defect. */
+  marks?: PhotoMark[];
 }
 
 export const NO_EDIT: PhotoEdit = { rotation: 0, crop: FULL_CROP };
@@ -45,7 +48,7 @@ export const NO_EDIT: PhotoEdit = { rotation: 0, crop: FULL_CROP };
  * the original so the photo is encoded only once); the original stays untouched on the device.
  */
 export async function preparePhoto(file: Blob, edit: PhotoEdit = NO_EDIT): Promise<Blob> {
-  if (edit.rotation === 0 && isFullCrop(edit.crop)) {
+  if (edit.rotation === 0 && isFullCrop(edit.crop) && !edit.marks?.length) {
     return (await resizeToJpeg(file, MAX_SIDE, QUALITY)).blob;
   }
   return editToJpeg(file, edit, MAX_SIDE, QUALITY);

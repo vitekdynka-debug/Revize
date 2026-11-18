@@ -84,6 +84,9 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   const editor = page.getByRole('dialog', { name: 'Upravit fotku' });
   await editor.getByRole('button', { name: 'Doprava' }).click();
   await expect(editor.locator('img[data-rotation="90"]')).toBeVisible();
+  // A red arrow pointing at the defect (drawn into the saved photo).
+  await editor.getByRole('button', { name: 'Šipka' }).click();
+  await expect(editor.getByTestId('mark-arrow')).toBeVisible();
   const corner = editor.getByLabel('Roh výřezu se');
   const box = (await corner.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -114,11 +117,26 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   const defectItem = inspected.find((i) => i.itemNumber === '10001')!;
   const photos = (await (
     await page.request.get(`/api/photos?inspectionId=${inspectionId}&itemId=${defectItem.id}`)
-  ).json()) as { owner: string; width: number; height: number }[];
+  ).json()) as { id: string; owner: string; width: number; height: number }[];
   const defectPhoto = photos.find((p) => p.owner === 'result')!;
   expect(defectPhoto.height).toBeGreaterThan(defectPhoto.width);
   expect(defectPhoto.width).toBeLessThan(1200);
   expect(defectPhoto.height).toBeLessThan(1600);
+  // The red arrow is drawn into the photo itself (the test photo is grey).
+  const redPixels = await page.evaluate(async (id) => {
+    const blob = await (await fetch(`/api/photos/${id}/original`)).blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d')!;
+    context.drawImage(bitmap, 0, 0);
+    const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    let red = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i]! > 180 && data[i + 1]! < 90 && data[i + 2]! < 90) red += 1;
+    }
+    return red;
+  }, defectPhoto.id);
+  expect(redPixels).toBeGreaterThan(500);
   // A photo added to the saved defect is sent even when the card is just closed.
   const another = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
