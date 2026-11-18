@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { checklistSchema } from '../checklist.js';
 import { fieldDefinitionsSchema } from '../equipment-fields.js';
 import { idSchema } from './common.js';
 
@@ -163,6 +164,8 @@ export const equipmentTypeSchema = z.object({
   protocolTemplate: z.string(),
   /** Defects rated green/yellow/red after ČSN EN 15635 (racks); otherwise fit / unfit. */
   riskLevels: z.boolean(),
+  /** Check points answered ANO / NE on every item in the field (ADR-0021). */
+  checklist: checklistSchema,
   schemaVersion: z.number().int(),
   archived: z.boolean(),
   itemCount: z.number().int(),
@@ -176,12 +179,14 @@ const equipmentTypeFields = {
   defaultIntervalMonths: z.number().int().min(1).max(120),
   protocolTemplate: z.string().max(20_000),
   riskLevels: z.boolean(),
+  checklist: checklistSchema,
 };
 export const createEquipmentTypeSchema = z.union([
   z.object({
     id: idSchema.optional(),
     ...equipmentTypeFields,
     riskLevels: equipmentTypeFields.riskLevels.default(false),
+    checklist: equipmentTypeFields.checklist.default([]),
   }),
   /** Copy of a library type; the name may be changed. */
   z.object({

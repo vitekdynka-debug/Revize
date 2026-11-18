@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  SegmentedControl,
   Divider,
   Drawer,
   Group,
@@ -18,6 +19,10 @@ import {
   FIT_LABELS,
   SEVERITY_LABELS,
   itemLabel,
+  checksSeverity,
+  failedChecks,
+  withCheckText,
+  type ChecklistItem,
   itemTypeLabel,
   outcomeLabel,
   severityOf,
@@ -143,11 +148,20 @@ function SheetBody({
   const [photosInProtocol, setPhotosInProtocol] = useState(
     draft?.photosInProtocol ?? current?.photosInProtocol ?? true,
   );
+  // Check points of the type (ADR-0021): ANO unless answered otherwise.
+  const checklist = type?.checklist ?? [];
+  const [checks, setChecks] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      checklist.map((c) => [c.key, draft?.checks?.[c.key] ?? current?.checks[c.key] ?? true]),
+    ),
+  );
+  const failed = failedChecks(checklist, checks);
   // Keeps the defect being written on the device until it is saved.
   useEffect(() => {
     if (readOnly || choice?.outcome !== 'defect') return;
     const unchanged =
       current?.outcome === 'defect' &&
+      JSON.stringify(checks) === JSON.stringify({ ...checks, ...current.checks }) &&
       description === (current.defectDescription ?? '') &&
       choice.severity === severityOf(current) &&
       includeInProtocol === current.includeInProtocol &&
@@ -161,9 +175,11 @@ function SheetBody({
       severity: choice.severity,
       includeInProtocol,
       photosInProtocol,
+      checks,
     });
   }, [
     readOnly,
+    checks,
     choice,
     description,
     includeInProtocol,
@@ -213,6 +229,7 @@ function SheetBody({
           severity: next.outcome === 'defect' ? next.severity : null,
           includeInProtocol: next.outcome === 'ok' || next.severity === 'red' || includeInProtocol,
           photosInProtocol: next.outcome === 'ok' || photosInProtocol,
+          ...(checklist.length ? { checks } : {}),
           recordedAt: new Date().toISOString(),
         },
       });
@@ -239,6 +256,25 @@ function SheetBody({
     clearDefectDraft(inspectionId, item.id);
     notifySaved(`${itemLabel(item)}: ${outcomeLabel(result, riskLevels)}`);
     onSaved(result);
+  };
+
+  /**
+   * ANO / NE of a check point. NE writes its text into the defect description and makes the
+   * result a defect at least of the point's level (amber for racks); ANO takes the text out.
+   */
+  const answerCheck = (check: ChecklistItem, yes: boolean) => {
+    const next = { ...checks, [check.key]: yes };
+    setChecks(next);
+    setDescription((text) => withCheckText(text, check, !yes));
+    setDescriptionError(null);
+    const needed = checksSeverity(checklist, next, riskLevels);
+    if (!needed) return;
+    const rank = { green: 0, amber: 1, red: 2 } as const;
+    setChoice((current) =>
+      current?.outcome === 'defect' && rank[current.severity] >= rank[needed]
+        ? current
+        : { outcome: 'defect', severity: needed },
+    );
   };
 
   const addDefectPhoto = async () => {
@@ -399,6 +435,29 @@ function SheetBody({
         </Alert>
       )}
 
+      {checklist.length > 0 && (
+        <Stack gap={6} data-testid="checklist">
+          <Divider label="Kontrolní body" labelPosition="left" />
+          {checklist.map((check) => (
+            <Group key={check.key} justify="space-between" wrap="nowrap">
+              <Text fw={500}>{check.label}</Text>
+              <SegmentedControl
+                size="md"
+                aria-label={check.label}
+                disabled={readOnly}
+                color={checks[check.key] === false ? 'orange' : 'green'}
+                value={checks[check.key] === false ? 'ne' : 'ano'}
+                data={[
+                  { value: 'ano', label: 'ANO' },
+                  { value: 'ne', label: 'NE' },
+                ]}
+                onChange={(value) => answerCheck(check, value === 'ano')}
+              />
+            </Group>
+          ))}
+        </Stack>
+      )}
+
       <Divider label="Výsledek kontroly" labelPosition="left" />
       <SimpleGrid cols={riskLevels ? { base: 2, sm: 4 } : { base: 1, sm: 3 }} spacing="sm">
         <Button
@@ -406,7 +465,8 @@ function SheetBody({
           color="green"
           variant={current?.outcome === 'ok' ? 'filled' : 'light'}
           leftSection={<IconCheck />}
-          disabled={readOnly}
+          disabled={readOnly || failed.length > 0}
+          title={failed.length ? 'Kontrolní bod je NE – uložte závadu' : undefined}
           loading={saving && choice === null}
           onClick={() => {
             setChoice(null);

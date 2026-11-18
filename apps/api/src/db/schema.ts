@@ -1,4 +1,4 @@
-import type { FieldDefinition } from '@revize/shared';
+import type { ChecklistItem, FieldDefinition } from '@revize/shared';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -178,6 +178,8 @@ export const equipmentType = pgTable(
      * result is just fit / unfit (a defect = unfit, taken out of service).
      */
     riskLevels: boolean('risk_levels').notNull().default(false),
+    /** Check points answered ANO / NE in the field (ADR-0021). */
+    checklist: jsonb('checklist').$type<ChecklistItem[]>().notNull().default([]),
     schemaVersion: integer('schema_version').notNull().default(1),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     ...timestamps,
@@ -345,6 +347,8 @@ export const inspectionResult = pgTable(
     includeInProtocol: boolean('include_in_protocol').notNull().default(true),
     /** Defect photos printed in the protocol (the technician or the office may leave them out). */
     photosInProtocol: boolean('photos_in_protocol').notNull().default(true),
+    /** Answers of the type's check points: key → true (ANO) / false (NE). */
+    checks: jsonb('checks').$type<Record<string, boolean>>().notNull().default({}),
     /** Time on the device when the technician recorded the result. */
     recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull(),
     recordedBy: uuid('recorded_by')

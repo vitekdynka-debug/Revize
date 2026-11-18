@@ -29,6 +29,8 @@ import {
   PROTOCOL_PLACEHOLDERS,
   fillProtocolTemplate,
   kindChanges,
+  checklistSchema,
+  type ChecklistItem,
   type ConversionSummary,
   type EquipmentType,
   type FieldDefinition,
@@ -43,6 +45,7 @@ import {
   useMe,
   useUpdateEquipmentType,
 } from '../api/hooks.js';
+import { ChecklistEditor } from '../components/ChecklistEditor.js';
 import { DynamicFields } from '../components/DynamicFields.js';
 import { formatDate, slugKey } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
@@ -77,6 +80,9 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
   const [interval, setInterval] = useState<number>(type.defaultIntervalMonths);
   const [template, setTemplate] = useState(type.protocolTemplate);
   const [riskLevels, setRiskLevels] = useState(type.riskLevels);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(type.checklist);
+  const savedCheckKeys = useMemo(() => new Set(type.checklist.map((c) => c.key)), [type.checklist]);
+  const [checklistErrors, setChecklistErrors] = useState<Record<string, string>>({});
   const [fields, setFields] = useState<DraftField[]>(() => toDraft(type));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewValues, setPreviewValues] = useState<Record<string, unknown>>({});
@@ -146,6 +152,16 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
       return;
     }
     setErrors({});
+    const checklistParsed = checklistSchema.safeParse(checklist);
+    if (!checklistParsed.success) {
+      const next: Record<string, string> = {};
+      for (const issue of checklistParsed.error.issues)
+        next[issue.path.join('.')] ??= issue.message;
+      setChecklistErrors(next);
+      notifyError(new Error('Zkontrolujte kontrolní body.'));
+      return;
+    }
+    setChecklistErrors({});
     update.mutate(
       {
         id: type.id,
@@ -154,6 +170,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
         defaultIntervalMonths: interval,
         protocolTemplate: template,
         riskLevels,
+        checklist: checklistParsed.data,
         fieldDefinitions: parsed.data,
       },
       {
@@ -283,6 +300,22 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
           disabled={!canWrite}
           checked={riskLevels}
           onChange={(e) => setRiskLevels(e.currentTarget.checked)}
+        />
+      </Paper>
+
+      <Paper withBorder p="md">
+        <Title order={4}>Kontrolní body v terénu</Title>
+        <Text size="sm" c="dimmed" mb="sm">
+          Technik u každého artiklu odpoví ANO / NE. Při NE se závada zapíše s tímto textem a úrovní
+          (u regálů např. kotvení do podlahy, štítek s nosností).
+        </Text>
+        <ChecklistEditor
+          value={checklist}
+          onChange={setChecklist}
+          savedKeys={savedCheckKeys}
+          riskLevels={riskLevels}
+          disabled={!canWrite}
+          errors={checklistErrors}
         />
       </Paper>
 

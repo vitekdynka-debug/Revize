@@ -11,6 +11,8 @@ export interface DefectDraft {
   severity: 'green' | 'amber' | 'red';
   includeInProtocol: boolean;
   photosInProtocol: boolean;
+  /** Answers of the check points (ADR-0021). */
+  checks?: Record<string, boolean>;
 }
 
 const key = (inspectionId: string, itemId: string) => `revize:defect:${inspectionId}:${itemId}`;

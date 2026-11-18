@@ -1,3 +1,4 @@
+import { RACK_CHECKLIST, type ChecklistItem } from './checklist.js';
 import { fieldDefinitionsSchema, type FieldDefinition } from './equipment-fields.js';
 
 /**
@@ -20,6 +21,8 @@ export interface EquipmentTypePreset {
   protocolTemplate: string;
   /** Defects rated green/yellow/red after ČSN EN 15635 (racks); otherwise fit / unfit. */
   riskLevels?: boolean;
+  /** Check points answered ANO / NE in the field (ADR-0021). */
+  checklist?: ChecklistItem[];
 }
 
 const LADDER_MANUFACTURERS = [
@@ -388,6 +391,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
     key: 'rack',
     name: 'Regál',
     riskLevels: true,
+    checklist: RACK_CHECKLIST,
     description:
       'Všechny skladovací regály v jednom typu; druh určuje pole „Typ regálu“ (paletový, policový, konzolový, vjezdový…).',
     standards: ['ČSN EN 15635', 'ČSN EN 15512', 'ČSN EN 15620', 'ČSN EN 15629', 'ČSN 26 9030'],

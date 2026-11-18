@@ -1,4 +1,4 @@
-import { newId } from '@revize/shared';
+import { RACK_CHECKLIST, newId } from '@revize/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ADMIN, bearer, createTestContext, type TestContext } from './helpers.js';
 
@@ -91,5 +91,62 @@ describe('inspection intervals', () => {
     }>();
     expect(a.nextInspectionDate).toBe('2027-05-03');
     expect(b.nextInspectionDate).toBe('2027-02-03');
+  });
+});
+
+describe('check points (ADR-0021)', () => {
+  it('stores the ANO / NE answers and keeps them when a result is saved without them', async () => {
+    const customers = (await api('GET', '/api/customers')).json<{ id: string }[]>();
+    const site = (await api('GET', `/api/customers/${customers[0]!.id}/sites`)).json<
+      { id: string }[]
+    >()[0]!;
+    const types = (await api('GET', '/api/equipment-types')).json<
+      { id: string; riskLevels: boolean; checklist: { key: string }[]; version: number }[]
+    >();
+    const rack = types.find((t) => t.riskLevels)!;
+    if (!rack.checklist.length) {
+      const set = await api('PATCH', `/api/equipment-types/${rack.id}`, {
+        version: rack.version,
+        checklist: RACK_CHECKLIST,
+      });
+      expect(set.statusCode, set.body).toBe(200);
+    }
+    const typed = (await api('GET', `/api/equipment-types/${rack.id}`)).json();
+    expect(typed.checklist.map((c: { key: string }) => c.key)).toEqual([
+      'floor_anchoring',
+      'load_sign',
+    ]);
+
+    const id = newId();
+    await api('PUT', `/api/inspections/${id}`, {
+      siteId: site.id,
+      inspectionDate: '2026-11-18',
+      equipmentTypeIds: [rack.id],
+    });
+    const item = (await api('GET', `/api/inspections/${id}/items`)).json<{ id: string }[]>()[0]!;
+    const resultId = newId();
+    const saved = await api('PUT', `/api/inspections/${id}/results/${item.id}`, {
+      id: resultId,
+      outcome: 'defect',
+      severity: 'amber',
+      defectDescription: 'Chybí štítek s nosností',
+      checks: { floor_anchoring: true, load_sign: false },
+      recordedAt: new Date().toISOString(),
+    });
+    expect(saved.statusCode, saved.body).toBe(200);
+    expect(saved.json().checks).toEqual({ floor_anchoring: true, load_sign: false });
+    // The office edits the description only: the answers stay.
+    const edited = await api('PUT', `/api/inspections/${id}/results/${item.id}`, {
+      id: resultId,
+      outcome: 'defect',
+      severity: 'amber',
+      defectDescription: 'Chybí štítek s nosností, doplnit',
+      recordedAt: new Date(Date.now() + 1000).toISOString(),
+    });
+    expect(edited.json().checks).toEqual({ floor_anchoring: true, load_sign: false });
+    const listed = (await api('GET', `/api/inspections/${id}/items`)).json<
+      { id: string; result: { checks: Record<string, boolean> } | null }[]
+    >();
+    expect(listed.find((i) => i.id === item.id)!.result!.checks.load_sign).toBe(false);
   });
 });

@@ -527,6 +527,7 @@ export function useRecordResult(inspectionId: string) {
         severity: parsed.severity,
         includeInProtocol: parsed.includeInProtocol,
         photosInProtocol: parsed.photosInProtocol,
+        checks: parsed.checks ?? {},
         recordedAt: parsed.recordedAt,
         recordedBy: me.id,
         recordedByName: me.displayName,

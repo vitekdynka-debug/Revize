@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ITEM_STATUSES } from './master-data.js';
+import { checksSchema } from '../checklist.js';
 import { idSchema, isoDateTimeSchema } from './common.js';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum ve formátu RRRR-MM-DD');
@@ -75,6 +76,8 @@ export const inspectionResultSchema = z.object({
   includeInProtocol: z.boolean(),
   /** The defect photos are printed in the protocol (can be switched off in the field or office). */
   photosInProtocol: z.boolean(),
+  /** Answers of the type's check points (ADR-0021): true = ANO, false = NE. */
+  checks: checksSchema,
   recordedAt: z.string(),
   recordedBy: idSchema,
   recordedByName: z.string(),
@@ -118,6 +121,8 @@ export const recordResultSchema = z
     takenOutOfService: z.boolean().default(false),
     includeInProtocol: z.boolean().default(true),
     photosInProtocol: z.boolean().default(true),
+    /** Answers of the check points; omitted (older clients, office edits) = kept as they are. */
+    checks: checksSchema.optional(),
     recordedAt: isoDateTimeSchema,
   })
   .superRefine((value, ctx) => {

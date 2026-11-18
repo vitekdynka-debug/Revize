@@ -74,6 +74,10 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
 ## Karta artiklu
 
 - Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.
+- **Kontrolní body:** u regálů (a typů, které je mají nastavené v kanceláři) je nad výsledkem
+  přepínač **ANO / NE** pro každý bod, např. _Kotvení do podlahy_ a _Štítek s nosností_.
+  Výchozí je ANO. **NE** vloží text bodu do popisu závady a nastaví žlutou závadu (u ostatních
+  typů závadu nebránící provozu); popis můžete doplnit. S odpovědí NE nejde uložit V pořádku.
 - **Regály** (typy se zapnutým hodnocením rizika podle ČSN EN 15635):
   - **V pořádku** uloží výsledek jedním klepnutím.
   - **Závada** má úroveň rizika. Napište popis, případně přidejte fotky závady a klepněte

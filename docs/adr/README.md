@@ -25,3 +25,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0018](0018-risk-levels-racks-only.md)         | Barvy rizika jen u regálů, jinde Vyhovuje / Nevyhovuje          | přijato                         |
 | [0019](0019-inspection-intervals.md)           | Interval kontrol u artiklu, umístění a provozovny               | přijato                         |
 | [0020](0020-optional-item-number.md)           | Artikl bez čísla TZ                                             | přijato                         |
+| [0021](0021-checklist.md)                      | Kontrolní body ANO / NE u typu vybavení                         | přijato                         |

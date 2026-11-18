@@ -17,3 +17,4 @@ export * from './protocol.js';
 export * from './scan-payload.js';
 export * from './type-merge.js';
 export * from './audit.js';
+export * from './checklist.js';

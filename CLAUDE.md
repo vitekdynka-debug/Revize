@@ -158,4 +158,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   (`ITEM_NUMBER_KEY`/`DESIGNATION_KEY` in `replacements`), autoNumber off by default; field mode
   edits item details through the outbox (`useUpdateFieldItem`, PATCH without version) and assigns a
   scanned unknown číslo TZ to an item without one; office filter `noNumber`.
+- Check points (ADR-0021): `equipment_type.checklist` (label, defect text, level), answers in
+  `inspection_result.checks`; field card ANO/NE (NE → defect text + at least the point's level,
+  `withCheckText`/`checksSeverity` in `packages/shared/src/checklist.ts`); office editor
+  `ChecklistEditor`. Lists show the kind before the type (`itemTypeLabel`); bulk "Nastavit údaj".
 - Next: M1 decision PWA vs Capacitor.

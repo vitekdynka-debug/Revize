@@ -42,6 +42,7 @@ function toDto(row: Row, count: number): EquipmentType {
     defaultIntervalMonths: row.defaultIntervalMonths,
     protocolTemplate: row.protocolTemplate,
     riskLevels: row.riskLevels,
+    checklist: row.checklist,
     schemaVersion: row.schemaVersion,
     archived: row.archivedAt !== null,
     itemCount: count,
@@ -339,6 +340,7 @@ export function createEquipmentTypesService(db: Db) {
           defaultIntervalMonths: preset.defaultIntervalMonths,
           protocolTemplate: preset.protocolTemplate,
           riskLevels: preset.riskLevels ?? false,
+          checklist: preset.checklist ?? [],
         };
       } else {
         const { id: _id, ...rest } = input;
