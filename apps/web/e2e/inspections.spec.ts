@@ -55,6 +55,15 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await page.getByRole('row', { name: /Sklad Zlín kancelář/ }).click();
   await expect(page.getByRole('heading', { name: 'Sklad Zlín kancelář' })).toBeVisible();
   await expect(page.getByTestId('inspection-results')).toContainText('Ohnutá štěřina');
+  // Filters: search narrows the list and the counts of the result filter follow it.
+  const results = page.getByTestId('inspection-results');
+  await page.getByLabel('Hledat').fill('štěřina');
+  await expect(results.locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByText('Závady (1)')).toBeVisible();
+  await page.getByRole('button', { name: 'Zrušit filtry' }).click();
+  await page.getByText(/^Nezkontrolované \(/).click();
+  await expect(results).not.toContainText('Ohnutá štěřina');
+  await page.getByText(/^Vše \(/).click();
   // Ladders are fit / unfit; the defect photo goes to the protocol unless unticked here.
   await expect(page.getByTestId('inspection-results')).toContainText('Nevyhovuje');
   const photosInProtocol = page.getByLabel('Fotky 30002 do protokolu');

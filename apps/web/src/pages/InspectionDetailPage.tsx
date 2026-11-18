@@ -9,22 +9,34 @@ import {
   Modal,
   Paper,
   SegmentedControl,
+  Select,
   SimpleGrid,
   Stack,
   Table,
   Text,
+  TextInput,
   Textarea,
   Title,
 } from '@mantine/core';
 import {
   LOCATION_SEPARATOR,
   addMonths,
+  checkDays,
+  localDay,
+  normalizeDesignation,
   outcomeLabel,
   severityOf,
   type InspectionResult,
   itemLabel,
 } from '@revize/shared';
-import { IconFileText, IconLock, IconLockOpen, IconPencil, IconTrash } from '@tabler/icons-react';
+import {
+  IconFileText,
+  IconLock,
+  IconLockOpen,
+  IconPencil,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { modals } from '@mantine/modals';
 import { useMemo, useState, type FormEvent } from 'react';
@@ -47,7 +59,7 @@ import { formatDate, formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { DateField } from '../components/DateField.js';
 
-type Filter = 'all' | 'defects' | 'unchecked';
+type Filter = 'all' | 'ok' | 'defects' | 'outOfService' | 'unchecked';
 
 const SEVERITY_COLOR = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 const color = (r: InspectionResult, riskLevels = true) => {
@@ -185,6 +197,11 @@ export function InspectionDetailPage() {
   const types = useEquipmentTypes(true);
   const me = useMe();
   const [filter, setFilter] = useState<Filter>('all');
+  const [hall, setHall] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [inspector, setInspector] = useState<string | null>(null);
+  const [day, setDay] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState<'close' | 'reopen' | 'protocol' | null>(null);
   const can = (p: string) => me.data?.permissions.includes(p as never) ?? false;
   const typeName = useMemo(
@@ -225,9 +242,42 @@ export function InspectionDetailPage() {
   if (inspection.isPending || items.isPending) return <Loader />;
   if (inspection.error) return <Alert color="red">{inspection.error.message}</Alert>;
   const data = inspection.data;
-  const rows = (items.data ?? []).filter((i) =>
-    filter === 'all' ? true : filter === 'defects' ? i.result?.outcome === 'defect' : !i.result,
+  const all = items.data ?? [];
+  // Hall, type, technician, day and search narrow the list; the counts of the result filter
+  // follow them (like in the field).
+  const query = normalizeDesignation(search);
+  const text = search.trim().toLocaleLowerCase('cs');
+  const scoped = all.filter(
+    (i) =>
+      (!hall || (i.locationPath[0] ?? 'Bez umístění') === hall) &&
+      (!typeFilter || i.equipmentTypeId === typeFilter) &&
+      (!inspector || i.result?.recordedByName === inspector) &&
+      (!day || (i.result && localDay(i.result.checkedAt) === day)) &&
+      (!text ||
+        (i.itemNumber?.includes(text.replace(/^0+/, '')) ?? false) ||
+        (!!query && !!i.designation && normalizeDesignation(i.designation).includes(query)) ||
+        (i.result?.defectDescription?.toLocaleLowerCase('cs').includes(text) ?? false)),
   );
+  const outcomeOf = (i: (typeof all)[number]): Filter =>
+    !i.result
+      ? 'unchecked'
+      : i.result.outcome === 'ok'
+        ? 'ok'
+        : i.result.takenOutOfService
+          ? 'outOfService'
+          : 'defects';
+  const count = (f: Filter) =>
+    f === 'all'
+      ? scoped.length
+      : f === 'defects'
+        ? scoped.filter((i) => i.result?.outcome === 'defect').length
+        : scoped.filter((i) => outcomeOf(i) === f).length;
+  const rows = scoped.filter(
+    (i) =>
+      filter === 'all' ||
+      (filter === 'defects' ? i.result?.outcome === 'defect' : outcomeOf(i) === filter),
+  );
+  const filtered = scoped.length !== all.length;
   const p = data.progress;
   const open = data.status === 'open';
   // The earliest next inspection by the items' intervals (item → location → site → type).
@@ -323,16 +373,90 @@ export function InspectionDetailPage() {
       </SimpleGrid>
       {data.note && <Alert color="gray">{data.note}</Alert>}
 
-      <SegmentedControl
-        w="fit-content"
-        value={filter}
-        onChange={(v) => setFilter(v as Filter)}
-        data={[
-          { value: 'all', label: `Vše (${p.total})` },
-          { value: 'defects', label: `Závady (${p.defect})` },
-          { value: 'unchecked', label: `Nezkontrolované (${p.total - p.checked})` },
-        ]}
-      />
+      <Group gap="sm" align="flex-end" data-testid="inspection-filters">
+        <Select
+          label="Hala"
+          placeholder="Všechny"
+          clearable
+          w={170}
+          data={[...new Set(all.map((i) => i.locationPath[0] ?? 'Bez umístění'))].sort((a, b) =>
+            a.localeCompare(b, 'cs'),
+          )}
+          value={hall}
+          onChange={setHall}
+        />
+        <Select
+          label="Typ vybavení"
+          placeholder="Všechny"
+          clearable
+          w={200}
+          data={[...new Set(all.map((i) => i.equipmentTypeId))].map((id) => ({
+            value: id,
+            label: typeName.get(id) ?? '?',
+          }))}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
+        <Select
+          label="Technik"
+          placeholder="Všichni"
+          clearable
+          w={170}
+          data={[...new Set(all.flatMap((i) => (i.result ? [i.result.recordedByName] : [])))].sort(
+            (a, b) => a.localeCompare(b, 'cs'),
+          )}
+          value={inspector}
+          onChange={setInspector}
+        />
+        <Select
+          label="Den kontroly"
+          placeholder="Všechny"
+          clearable
+          w={150}
+          data={checkDays(all, data.inspectionDate)
+            .filter((d) => all.some((i) => i.result && localDay(i.result.checkedAt) === d))
+            .map((d) => ({ value: d, label: formatDate(d) }))}
+          value={day}
+          onChange={setDay}
+        />
+        <TextInput
+          label="Hledat"
+          placeholder="Číslo TZ, označení, popis závady"
+          leftSection={<IconSearch size={16} />}
+          style={{ flex: 1, minWidth: 200 }}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+        />
+      </Group>
+      <Group gap="sm">
+        <SegmentedControl
+          w="fit-content"
+          value={filter}
+          onChange={(v) => setFilter(v as Filter)}
+          data={[
+            { value: 'all', label: `Vše (${count('all')})` },
+            { value: 'ok', label: `V pořádku (${count('ok')})` },
+            { value: 'defects', label: `Závady (${count('defects')})` },
+            { value: 'outOfService', label: `Vyřazené (${count('outOfService')})` },
+            { value: 'unchecked', label: `Nezkontrolované (${count('unchecked')})` },
+          ]}
+        />
+        {filtered && (
+          <Button
+            variant="subtle"
+            size="xs"
+            onClick={() => {
+              setHall(null);
+              setTypeFilter(null);
+              setInspector(null);
+              setDay(null);
+              setSearch('');
+            }}
+          >
+            Zrušit filtry
+          </Button>
+        )}
+      </Group>
       <Table data-testid="inspection-results">
         <Table.Thead>
           <Table.Tr>

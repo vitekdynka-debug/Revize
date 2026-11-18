@@ -198,6 +198,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
       - **Stáhnout → Jen příloha 1** vytiskne tabulku samostatně (PDF nebo Word).
       - Výběr sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
         až se odešlou (stav „Vše odesláno“).
+    - **Filtry** nad tabulkou výsledků: hala, typ vybavení, technik, den kontroly a hledání
+      (číslo TZ, označení, popis závady). Počty u _Vše / V pořádku / Závady / Vyřazené /
+      Nezkontrolované_ se řídí ostatními filtry; šipky v detailu artiklu procházejí jen
+      vyfiltrované řádky. _Zrušit filtry_ vrátí celý seznam.
     - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
       kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
       Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
