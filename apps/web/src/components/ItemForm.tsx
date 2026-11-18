@@ -304,6 +304,14 @@ export function ItemForm({
           ([key, value]) => stableJson(value) !== stableJson(before[key]),
         ),
       ) as FieldItemChanges;
+      // Retiring in the field (hidden under "Vyřadit z evidence"): with a reason for the audit.
+      if (retired && !item.retired) {
+        if (!reason.trim()) {
+          setErrors({ reason: 'Uveďte důvod vyřazení' });
+          return;
+        }
+        Object.assign(changes, { retired: true, reason: reason.trim() });
+      }
       if (Object.keys(changes).length === 0) return onDone();
       const path = locations.data?.find((l) => l.id === locationId)?.pathNames ?? [];
       onUpdate(changes, path).then(() => onDone(), notifyError);
@@ -559,6 +567,26 @@ export function ItemForm({
           </Alert>
         )}
 
+        {item && onUpdate && !item.retired && (
+          <Stack gap="xs">
+            <Switch
+              color="red"
+              label="Vyřadit z evidence (artikl už u zákazníka není; nekontroluje se, zůstává v historii)"
+              checked={retired}
+              onChange={(e) => setRetired(e.currentTarget.checked)}
+            />
+            {retired && (
+              <TextInput
+                label="Důvod vyřazení"
+                required
+                placeholder="Např. zlikvidován, předán jinam"
+                value={reason}
+                error={errors.reason}
+                onChange={(e) => setReason(e.currentTarget.value)}
+              />
+            )}
+          </Stack>
+        )}
         {item && !onUpdate && (
           <Stack gap="xs">
             <Text size="sm" fw={500}>

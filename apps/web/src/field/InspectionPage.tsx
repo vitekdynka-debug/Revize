@@ -873,7 +873,11 @@ export function InspectionPage() {
                     : {}),
                 },
               });
-              notifySaved(`Artikl ${number ?? itemLabel(item)} upraven v zařízení`);
+              notifySaved(
+                changes.retired
+                  ? `Artikl ${itemLabel(item)} vyřazen z evidence`
+                  : `Artikl ${number ?? itemLabel(item)} upraven v zařízení`,
+              );
             }}
             onDone={() => {
               setOpen({ id: editing.item.id, source: editing.source });

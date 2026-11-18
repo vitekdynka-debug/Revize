@@ -663,9 +663,12 @@ export function useUpdateFieldItem(inspectionId: string) {
         itemId: id,
       });
     },
-    onSuccess: (_, { id, preview }) =>
+    onSuccess: (_, { id, preview, changes }) =>
       client.setQueryData<InspectionItem[]>(['inspection-items', inspectionId], (items) =>
-        items?.map((i) => (i.id === id ? { ...i, ...preview } : i)),
+        // A retired item leaves the working list.
+        changes.retired
+          ? items?.filter((i) => i.id !== id)
+          : items?.map((i) => (i.id === id ? { ...i, ...preview } : i)),
       ),
   });
 }

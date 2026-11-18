@@ -34,4 +34,17 @@ describe('applyPending', () => {
     // An edit of an item that is not in the list does not add a half item.
     expect(applyPending([], 'x', [edit])).toEqual([]);
   });
+
+  it('drops an item retired in the field from the working list', () => {
+    const retire = {
+      seq: 2,
+      kind: 'item',
+      method: 'PATCH',
+      inspectionId: 'x',
+      itemId: 'i1',
+      body: { retired: true, reason: 'Zlikvidován' },
+      preview: { id: 'i1' },
+    } as unknown as OutboxRow;
+    expect(applyPending([item], 'x', [retire])).toEqual([]);
+  });
 });

@@ -266,8 +266,20 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page)).toBeHidden();
   await expect(page.getByTestId('progress')).toHaveText('4 / 7 zkontrolováno');
 
+  // Retiring an item in the field (hidden in "Upravit údaje", with a reason).
+  await page.getByTestId('item-10004').click();
+  await sheet(page).getByRole('button', { name: 'Upravit údaje' }).click();
+  const retire = page.getByRole('dialog').filter({ hasText: 'Upravit artikl 10004' });
+  await retire.getByLabel(/Vyřadit z evidence/).check();
+  await retire.getByRole('button', { name: 'Uložit', exact: true }).click();
+  await expect(retire.getByText('Uveďte důvod vyřazení')).toBeVisible();
+  await retire.getByLabel('Důvod vyřazení').fill('Zlikvidován');
+  await retire.getByRole('button', { name: 'Uložit', exact: true }).click();
+  await expect(page.getByTestId('item-10004')).toHaveCount(0);
+  await expect(page.getByTestId('progress')).toHaveText('4 / 6 zkontrolováno');
+
   // Leaving keeps the inspection open with its progress.
   await page.getByRole('button', { name: 'Ukončit práci' }).click();
   await page.getByRole('button', { name: 'Odejít' }).click();
-  await expect(page.getByText('4 / 7 zkontrolováno')).toBeVisible();
+  await expect(page.getByText('4 / 6 zkontrolováno')).toBeVisible();
 });

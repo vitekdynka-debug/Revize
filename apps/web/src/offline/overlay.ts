@@ -17,6 +17,14 @@ export function applyPending(
       const preview = command.preview as InspectionItem;
       const existing = byId.get(preview.id);
       if (command.method === 'PATCH') {
+        // Retired in the field: no longer in the working list.
+        if ((command.body as { retired?: boolean } | null)?.retired) {
+          if (existing) {
+            list.splice(list.indexOf(existing), 1);
+            byId.delete(preview.id);
+          }
+          continue;
+        }
         // A field edit: its changed fields over the item (new or from the server).
         if (existing) Object.assign(existing, preview);
       } else if (!existing) {

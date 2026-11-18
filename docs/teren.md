@@ -116,8 +116,10 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
   na původní fotce, kvalita se tím nesnižuje.
 - **Upravit údaje** (vpravo nahoře na kartě) otevře formulář artiklu: číslo TZ, označení, QR kód,
   umístění, typ, příští kontrola a údaje typu (výrobce, nosnost…). Uloží se jen to, co jste
-  změnili, nejdřív do zařízení a pak na server (funguje i bez signálu). Stav, vyřazení z evidence
-  a interval kontrol mění kancelář.
+  změnili, nejdřív do zařízení a pak na server (funguje i bez signálu). Dole ve formuláři je
+  **Vyřadit z evidence** (artikl už u zákazníka není): s důvodem, artikl zmizí ze seznamu kontroly,
+  zůstane v historii a zapíše se do historie změn. Vrátit do evidence ho jde v kanceláři. Stav
+  provozu a interval kontrol mění kancelář.
 - Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.
 - **Rozepsaná závada** se průběžně ukládá do zařízení: popis zůstane, i když mezitím fotíte,
   kartu zavřete nebo se aplikace po focení znovu načte. Zmizí až po uložení výsledku.
