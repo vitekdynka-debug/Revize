@@ -6,6 +6,14 @@ export function send(path: string, init: RequestInit): Promise<Response> {
   return fetch(`/api${path}`, init);
 }
 
+/**
+ * The URL the browser itself can download from (a file streamed by the server, saved as it
+ * arrives). Null in the demo build, where the API lives in the page.
+ */
+export function directUrl(path: string): string | null {
+  return `/api${path}`;
+}
+
 /** Only the demo build has local data to reset. */
 export function resetDemo(): Promise<void> {
   return Promise.reject(new Error('Not a demo build'));

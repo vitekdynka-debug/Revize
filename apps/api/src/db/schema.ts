@@ -347,6 +347,11 @@ export const inspectionResult = pgTable(
     includeInProtocol: boolean('include_in_protocol').notNull().default(true),
     /** Defect photos printed in the protocol (the technician or the office may leave them out). */
     photosInProtocol: boolean('photos_in_protocol').notNull().default(true),
+    /**
+     * When the item was checked: the first recording of its result. Later changes (field or
+     * office) keep it unless the office restamps it. Printed in the protocol and its appendix.
+     */
+    checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
     /** Answers of the type's check points: key → true (ANO) / false (NE). */
     checks: jsonb('checks').$type<Record<string, boolean>>().notNull().default({}),
     /** Time on the device when the technician recorded the result. */

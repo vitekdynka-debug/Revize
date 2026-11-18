@@ -1,6 +1,6 @@
 import type { ApiError } from '@revize/shared';
 import { localDb } from '../platform/local-db.js';
-import { send } from './transport.js';
+import { directUrl, send } from './transport.js';
 
 /** Error returned by the API: machine code, Czech message, optional per-field issues. */
 export class ApiRequestError extends Error {
@@ -158,6 +158,25 @@ export function stampedFileName(fileName: string, now = new Date()): string {
   return dot > 0
     ? `${fileName.slice(0, dot)}_${time}${fileName.slice(dot)}`
     : `${fileName}_${time}`;
+}
+
+/**
+ * Large downloads (a ZIP of hundreds of photos): the browser downloads the file itself, saving it
+ * while the server is still sending, with its own progress. Must run right in the tap handler:
+ * Safari drops a download started after a long wait (as with a blob fetched first). The demo
+ * build has no server and falls back to `downloadFile`.
+ */
+export function downloadDirect(path: string, fileName: string): Promise<void> {
+  const url = directUrl(path);
+  if (!url) return downloadFile(path, fileName);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = stampedFileName(fileName);
+  link.rel = 'noopener';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  return Promise.resolve();
 }
 
 /** Downloads a file the API generates (e.g. an import template) under the given name. */

@@ -13,6 +13,7 @@ import {
   photoCaption,
   photoFileName,
   photoPrefixOf,
+  projectedNextInspection,
   itemLabel,
   sheetName,
   toCsv,
@@ -86,7 +87,11 @@ export function createExportsService(
   /** Inspection, its items (sorted like the field list), their types and named photos. */
   async function load(auth: AuthContext, inspectionId: string) {
     const inspection = await inspections.get(auth, inspectionId);
-    const items = await inspections.items(auth, inspectionId);
+    // Before closing, the next date of a checked item is the one closing would write.
+    const items = (await inspections.items(auth, inspectionId)).map((i) => ({
+      ...i,
+      nextInspectionDate: projectedNextInspection(i, inspection),
+    }));
     const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))];
     const types: ExportType[] = typeIds.length
       ? (

@@ -78,6 +78,8 @@ export const inspectionResultSchema = z.object({
   photosInProtocol: z.boolean(),
   /** Answers of the type's check points (ADR-0021): true = ANO, false = NE. */
   checks: checksSchema,
+  /** When the item was checked (first recording); kept by later changes. */
+  checkedAt: z.string(),
   recordedAt: z.string(),
   recordedBy: idSchema,
   recordedByName: z.string(),
@@ -123,6 +125,8 @@ export const recordResultSchema = z
     photosInProtocol: z.boolean().default(true),
     /** Answers of the check points; omitted (older clients, office edits) = kept as they are. */
     checks: checksSchema.optional(),
+    /** Office: the change also moves the date of the check to `recordedAt` (asked, default no). */
+    restampCheckedAt: z.boolean().optional(),
     recordedAt: isoDateTimeSchema,
   })
   .superRefine((value, ctx) => {

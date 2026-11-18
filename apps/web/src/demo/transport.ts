@@ -6,3 +6,8 @@ export function send(path: string, init: RequestInit): Promise<Response> {
 }
 
 export { resetDemo } from './runtime.js';
+
+/** The API runs in the page: nothing the browser could download from by itself. */
+export function directUrl(_path: string): string | null {
+  return null;
+}

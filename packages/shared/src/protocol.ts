@@ -6,7 +6,7 @@
  * depend on anything but its data.
  */
 
-import { formatDate } from './dates.js';
+import { formatDate, localDay } from './dates.js';
 import {
   appendixPages,
   linesOf,
@@ -36,6 +36,32 @@ export function addMonths(isoDate: string, months: number): string {
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${year}-${pad(month)}-${pad(Math.min(d, lastDay))}`;
+}
+
+/**
+ * The days the items were checked on (an inspection may take more days), oldest first; the
+ * inspection date when nothing is checked yet.
+ */
+export function checkDays(
+  items: readonly { result: { checkedAt: string } | null }[],
+  inspectionDate: string,
+): string[] {
+  const days = [
+    ...new Set(items.flatMap((i) => (i.result ? [localDay(i.result.checkedAt)] : []))),
+  ].sort();
+  return days.length ? days : [inspectionDate];
+}
+
+/**
+ * The next inspection date of an item as it stands: after closing the one closing wrote; before
+ * that, for a checked item, the one closing would write (inspection date + its interval).
+ */
+export function projectedNextInspection(
+  item: { result: unknown; intervalMonths: number; nextInspectionDate: string | null },
+  inspection: { status: string; inspectionDate: string; nextInspectionDate?: string | null },
+): string | null {
+  if (inspection.status === 'closed' || !item.result) return item.nextInspectionDate;
+  return nextInspectionDateOf(inspection.inspectionDate, item.intervalMonths, null);
 }
 
 /**
@@ -140,6 +166,8 @@ export interface ProtocolData {
   customer: { name: string; companyId: string | null; address: string | null };
   site: { name: string; address: string | null };
   inspectionDate: string;
+  /** The days the items were checked on (`checkDays`); printed as the date of the inspection. */
+  inspectionDays?: string[];
   nextInspectionDate: string | null;
   inspectors: string[];
   leadInspector: string;
@@ -184,6 +212,12 @@ const escape = (text: string) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 const czechDate = (iso: string | null) => formatDate(iso);
+
+/** "12/11/2026, 13/11/2026": every day the items were checked on (else the inspection date). */
+export function inspectionDaysText(data: Pick<ProtocolData, 'inspectionDate' | 'inspectionDays'>) {
+  const days = data.inspectionDays?.length ? data.inspectionDays : [data.inspectionDate];
+  return days.map((d) => formatDate(d)).join(', ');
+}
 
 /** A block of a protocol text: heading, paragraph, or a list with sub-items. */
 export type ProtocolTextBlock =
@@ -690,7 +724,7 @@ ${
 <html lang="cs"><head><meta charset="utf-8"><title>${APPENDIX_TITLE}</title>
 <style>${STYLE}@page { size: A4 landscape; margin: ${margins}; } .appendix { page-break-before: auto; }</style></head><body>
 ${frame ? `<div class="frame-head">${pageHeader(c, framePages)}</div>` : ''}
-<p class="small">${escape(data.customer.name)}, ${escape(data.site.name)} – kontrola ${czechDate(data.inspectionDate)}</p>
+<p class="small">${escape(data.customer.name)}, ${escape(data.site.name)} – kontrola ${escape(inspectionDaysText(data))}</p>
 ${appendixHtml}
 ${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
 </body></html>`;
@@ -722,7 +756,7 @@ ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ješ
   <tr><td class="grey">Provozovatel</td><td>${customer}</td></tr>
   <tr><td class="grey">Pracoviště/objekt/umístění</td><td>${site.join(', ')}</td></tr>
   <tr><td class="grey">Kontrolu provedl</td><td>${inspectors}</td></tr>
-  <tr><td class="grey">Kontrola provedena dne</td><td>${czechDate(data.inspectionDate)}</td></tr>
+  <tr><td class="grey">Kontrola provedena dne</td><td>${escape(inspectionDaysText(data))}</td></tr>
   <tr><td class="grey">Následnou kontrolu provést nejpozději do</td><td>${czechDate(data.nextInspectionDate)}</td></tr>
   ${data.note ? `<tr><td class="grey">Poznámka</td><td>${escape(data.note)}</td></tr>` : ''}
 </table>

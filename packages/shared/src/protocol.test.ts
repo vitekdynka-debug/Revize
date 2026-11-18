@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { EQUIPMENT_TYPE_PRESETS } from './equipment-presets.js';
 import {
+  checkDays,
+  inspectionDaysText,
+  projectedNextInspection,
   addMonths,
   certificationLines,
   inspectionIntervalOf,
@@ -176,5 +179,36 @@ describe('protocolTextHtml', () => {
       const html = protocolTextHtml(preset.protocolTemplate);
       expect(html, preset.key).toMatch(/^<h3>.+<\/h3><ul><li>.+<ul><li>/);
     }
+  });
+});
+
+describe('dates of the check', () => {
+  it('lists every day an item was checked on (Czech time), else the inspection date', () => {
+    const at = (checkedAt: string) => ({ result: { checkedAt } });
+    expect(
+      checkDays(
+        [at('2026-11-13T09:00:00Z'), at('2026-11-12T23:30:00Z'), { result: null }],
+        '2026-11-12',
+      ),
+    ).toEqual(['2026-11-13']);
+    expect(
+      checkDays([at('2026-11-12T08:00:00Z'), at('2026-11-14T08:00:00Z')], '2026-11-12'),
+    ).toEqual(['2026-11-12', '2026-11-14']);
+    expect(checkDays([{ result: null }], '2026-11-12')).toEqual(['2026-11-12']);
+    expect(
+      inspectionDaysText({
+        inspectionDate: '2026-11-12',
+        inspectionDays: ['2026-11-12', '2026-11-14'],
+      }),
+    ).toBe('12/11/2026, 14/11/2026');
+  });
+
+  it('projects the next inspection before closing', () => {
+    const open = { status: 'open', inspectionDate: '2026-11-12' };
+    const checked = { result: {}, intervalMonths: 12, nextInspectionDate: '2025-11-01' };
+    expect(projectedNextInspection(checked, open)).toBe('2027-11-12');
+    // Unchecked: what it had; closed: what closing wrote.
+    expect(projectedNextInspection({ ...checked, result: null }, open)).toBe('2025-11-01');
+    expect(projectedNextInspection(checked, { ...open, status: 'closed' })).toBe('2025-11-01');
   });
 });

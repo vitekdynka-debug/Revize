@@ -49,3 +49,13 @@ export function parseDateInput(input: string): string | null {
   }
   return `${y}-${pad(m)}-${pad(d)}`;
 }
+
+/** The day (Czech time) of a moment such as `checkedAt`: `2026-11-12`. */
+export function localDay(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Prague',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso));
+}

@@ -2,7 +2,7 @@ import { Button, Menu, Text } from '@mantine/core';
 import { fileNamePart, type Inspection } from '@revize/shared';
 import { IconDownload, IconFileSpreadsheet, IconFileText, IconPhoto } from '@tabler/icons-react';
 import { useState } from 'react';
-import { downloadFile } from '../api/client.js';
+import { downloadDirect, downloadFile } from '../api/client.js';
 import { usePhotosList } from '../api/hooks.js';
 import { notifyError } from '../lib/notify.js';
 
@@ -76,10 +76,11 @@ export function ExportMenu({ inspection }: { inspection: Inspection }) {
               leftSection={<IconPhoto size={16} />}
               disabled={chosen !== undefined && chosen.length === 0}
               onClick={() =>
-                download(
-                  set.query ? `photos.zip?only=${set.query}` : 'photos.zip',
+                // Straight from the server: hundreds of photos stream into the file.
+                void downloadDirect(
+                  `/inspections/${inspection.id}/${set.query ? `photos.zip?only=${set.query}` : 'photos.zip'}`,
                   `fotky${set.suffix}-${base}.zip`,
-                )
+                ).catch(notifyError)
               }
             >
               {set.label}

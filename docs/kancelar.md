@@ -206,6 +206,14 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
       zkušební kontrolu. Nejde vrátit zpět; artikly zůstanou a datum příští kontroly ani
       vyřazení z provozu, které kontrola zapsala, se nemění. Zapíše se do historie změn.
     - **Export:**
+      - **Datum kontroly** artiklu je den, kdy technik výsledek poprvé zapsal; pozdější úpravy ho
+        nemění. Při úpravě výsledku v kanceláři je volba _Změnit datum kontroly na dnešek_
+        (výchozí vypnutá). Protokol uvede v „Kontrola provedena dne“ všechny dny, kdy se
+        kontrolovalo (kontrola na dvakrát), a Příloha 1 má vždy sloupec _Datum kontroly_.
+      - **Příští kontrola** v exportu i v příloze je vyplněná už před uzavřením: datum kontroly
+        - interval artiklu (stejně jako ji pak zapíše uzavření).
+      - Fotky v ZIP stahuje přímo prohlížeč (i stovky fotek): soubor se ukládá, jak přichází, a
+        průběh ukazuje prohlížeč.
       - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
       - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.
       - _Fotky (ZIP s popisy)_: fotky závad pojmenované podle čísla artiklu (`10001_01.jpg`),

@@ -291,6 +291,7 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
       includeInProtocol: row.includeInProtocol,
       photosInProtocol: row.photosInProtocol,
       checks: row.checks,
+      checkedAt: row.checkedAt.toISOString(),
       recordedAt: row.recordedAt.toISOString(),
       recordedBy: row.recordedBy,
       recordedByName: extra?.name ?? '?',
@@ -476,6 +477,7 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
               includeInProtocol: r.result.includeInProtocol,
               photosInProtocol: r.result.photosInProtocol,
               checks: r.result.checks,
+              checkedAt: r.result.checkedAt.toISOString(),
               recordedAt: r.result.recordedAt.toISOString(),
               recordedBy: r.result.recordedBy,
               recordedByName: r.recordedByName ?? '?',
@@ -575,6 +577,7 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
             existing.includeInProtocol === values.includeInProtocol &&
             existing.photosInProtocol === values.photosInProtocol &&
             JSON.stringify(existing.checks) === JSON.stringify(input.checks ?? existing.checks) &&
+            !input.restampCheckedAt &&
             existing.recordedAt.getTime() === recordedAt.getTime() &&
             existing.recordedBy === auth.userId;
           if (unchanged) return resultDto(tx, existing);
@@ -584,6 +587,8 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
               ...values,
               // Omitted answers (office edits, older clients) stay as they were.
               checks: input.checks ?? existing.checks,
+              // The date of the check stays the first one unless the office moves it.
+              checkedAt: input.restampCheckedAt ? recordedAt : existing.checkedAt,
               version: existing.version + 1,
               updatedAt: new Date(),
             })
@@ -613,6 +618,7 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
               itemId,
               ...values,
               checks: input.checks ?? {},
+              checkedAt: recordedAt,
             })
             .returning();
           await audit(tx, auth, 'inspection.result', 'inspection_result', input.id, null, saved);

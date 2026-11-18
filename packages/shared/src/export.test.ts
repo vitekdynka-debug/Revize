@@ -88,6 +88,7 @@ describe('export table', () => {
           includeInProtocol: true,
           photosInProtocol: true,
           checks: {},
+          checkedAt: '2026-11-03T08:05:00Z',
           recordedAt: '2026-11-03T08:05:00Z',
           recordedBy: '00000000-0000-4000-8000-0000000000cc',
           recordedByName: 'Jan Technik',
@@ -114,6 +115,8 @@ describe('export table', () => {
       'ano',
       'Jan Technik',
       '03/11/2026 09:05',
+      // Datum kontroly: the first recording of the result.
+      '03/11/2026',
       '10001_01.jpg',
       '03/11/2027',
     ]);

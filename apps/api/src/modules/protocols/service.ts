@@ -1,6 +1,9 @@
 import {
   LOCATION_SEPARATOR,
   appendixColumns,
+  checkDays,
+  inspectionDaysText,
+  projectedNextInspection,
   appendixRow,
   DEFAULT_APPENDIX_COLUMNS,
   photoBox,
@@ -80,7 +83,16 @@ function appendixOf(
   keys: readonly string[],
 ): ProtocolData['appendix'] {
   const available = appendixColumns(types);
-  const chosen = keys
+  // "Datum kontroly" is always in the appendix (next to the location), chosen or not.
+  const withDate = keys.includes('checkedAt')
+    ? keys
+    : (() => {
+        const at = keys.indexOf('location');
+        return at >= 0
+          ? [...keys.slice(0, at + 1), 'checkedAt', ...keys.slice(at + 1)]
+          : [...keys, 'checkedAt'];
+      })();
+  const chosen = withDate
     .map((key) => available.find((c) => c.key === key))
     .filter((c): c is NonNullable<typeof c> => c !== undefined);
   if (!chosen.length) return null;
@@ -145,9 +157,16 @@ export function createProtocolsService(
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of some equipment types contains only their items and their protocol texts.
-    const items = (await inspections.items(auth, inspectionId)).filter(
-      (i) => !equipmentTypeIds.length || equipmentTypeIds.includes(i.equipmentTypeId),
-    );
+    // Before closing, the next date of a checked item is the one closing would write.
+    const items = (await inspections.items(auth, inspectionId))
+      .filter((i) => !equipmentTypeIds.length || equipmentTypeIds.includes(i.equipmentTypeId))
+      .map((i) => ({ ...i, nextInspectionDate: projectedNextInspection(i, inspection) }));
+    // Every day an item was checked on (an inspection may take two visits).
+    const inspectionDays = checkDays(items, inspection.inspectionDate);
+    const daysText = inspectionDaysText({
+      inspectionDate: inspection.inspectionDate,
+      inspectionDays,
+    });
     const org = await organizationOf(db, auth);
     const settings = settingsOf(org);
     const [[customerRow], [siteRow]] = await Promise.all([
@@ -206,7 +225,7 @@ export function createProtocolsService(
           firma: org.name,
           zakaznik: inspection.customerName,
           provozovna: inspection.siteName,
-          datum_kontroly: czechDate(inspection.inspectionDate),
+          datum_kontroly: daysText,
           technik: inspectors.join(', '),
           datum_pristi_kontroly: czechDate(next),
         });
@@ -276,6 +295,7 @@ export function createProtocolsService(
       },
       site: { name: inspection.siteName, address: siteRow?.address ?? null },
       inspectionDate: inspection.inspectionDate,
+      inspectionDays,
       // Before closing: the date closing would set (the earliest of the types' intervals).
       nextInspectionDate: inspection.nextInspectionDate ?? nextDates.sort()[0] ?? null,
       inspectors,

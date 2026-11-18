@@ -126,6 +126,8 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
     'Označení',
     'Typ vybavení',
     'Umístění',
+    // Always there, next to the location (the days of the checks).
+    'Datum kontroly',
     'Schopno bezpečného provozu',
     'Poznámka (popis zjištění, závady, doporučení)',
   ]);

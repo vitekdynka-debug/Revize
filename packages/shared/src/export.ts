@@ -4,7 +4,7 @@
  */
 import type { InspectionItem, Severity } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
-import { formatDate, formatDateTime } from './dates.js';
+import { formatDate, formatDateTime, localDay } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
 import {
   FIT_DEFECT_TITLES,
@@ -46,6 +46,7 @@ const FIXED_AFTER: ExportColumn[] = [
   { header: 'V protokolu', width: 10 },
   { header: 'Zapsal', width: 18 },
   { header: 'Zapsáno', width: 18 },
+  { header: 'Datum kontroly', width: 14 },
   { header: 'Fotky závady', width: 30 },
   { header: 'Příští kontrola', width: 14 },
 ];
@@ -108,6 +109,7 @@ export function exportRow(
     severity ? (result!.includeInProtocol ? 'ano' : 'ne') : '',
     result?.recordedByName ?? '',
     formatDateTime(result?.recordedAt ?? null),
+    result ? formatDate(localDay(result.checkedAt)) : '',
     photoNames.join(', '),
     formatDate(item.nextInspectionDate),
   ];
@@ -385,6 +387,7 @@ const APPENDIX_FIXED: AppendixColumn[] = [
   { key: 'type', label: 'Typ vybavení' },
   { key: 'location', label: 'Umístění' },
   { key: 'qrCode', label: 'QR kód' },
+  { key: 'checkedAt', label: 'Datum kontroly' },
   { key: 'result', label: 'Výsledek' },
   { key: 'safe', label: 'Schopno bezpečného provozu' },
   { key: 'defect', label: 'Závada' },
@@ -455,6 +458,8 @@ export function appendixRow(
       }
       case 'nextInspection':
         return formatDate(item.nextInspectionDate);
+      case 'checkedAt':
+        return item.result ? formatDate(localDay(item.result.checkedAt)) : '';
       default:
         return '';
     }

@@ -531,6 +531,13 @@ export function useRecordResult(inspectionId: string) {
         includeInProtocol: parsed.includeInProtocol,
         photosInProtocol: parsed.photosInProtocol,
         checks: parsed.checks ?? {},
+        // The first recording stays the date of the check (as on the server).
+        checkedAt:
+          (!parsed.restampCheckedAt &&
+            client
+              .getQueryData<InspectionItem[]>(['inspection-items', inspectionId])
+              ?.find((i) => i.id === itemId)?.result?.checkedAt) ||
+          parsed.recordedAt,
         recordedAt: parsed.recordedAt,
         recordedBy: me.id,
         recordedByName: me.displayName,

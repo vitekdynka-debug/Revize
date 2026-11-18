@@ -7,6 +7,7 @@ import {
   formatDate,
   parseProtocolText,
   defectCardTitle,
+  inspectionDaysText,
   protocolItemNumber,
   protocolDefectGroups,
   protocolLayout,
@@ -258,7 +259,7 @@ function infoTable(data: ProtocolData) {
     ['Provozovatel', customer.join(', ')],
     ['Pracoviště/objekt/umístění', site.join(', ')],
     ['Kontrolu provedl', data.inspectors.join(', ') || data.leadInspector],
-    ['Kontrola provedena dne', formatDate(data.inspectionDate)],
+    ['Kontrola provedena dne', inspectionDaysText(data)],
     ['Následnou kontrolu provést nejpozději do', formatDate(data.nextInspectionDate)],
     ...(data.note ? ([['Poznámka', data.note]] as [string, string][]) : []),
   ];

@@ -35,7 +35,7 @@ import {
 } from '../api/hooks.js';
 import { usePhotoEditor } from '../field/PhotoEditor.js';
 import { PhotoStrip } from '../field/PhotoStrip.js';
-import { formatDateTime } from '../lib/format.js';
+import { formatDate, formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { ItemForm } from './ItemForm.js';
@@ -100,6 +100,8 @@ function Body({
     current ? (severityOf(current) ?? 'ok') : null,
   );
   const [description, setDescription] = useState(current?.defectDescription ?? '');
+  // A change in the office keeps the date of the check unless asked (default: no).
+  const [restamp, setRestamp] = useState(false);
   const [includeInProtocol, setIncludeInProtocol] = useState(current?.includeInProtocol ?? true);
   const [photosInProtocol, setPhotosInProtocol] = useState(current?.photosInProtocol ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +138,8 @@ function Body({
           defectDescription: defect ? description.trim() : null,
           includeInProtocol: !defect || choice === 'red' || includeInProtocol,
           photosInProtocol: !defect || photosInProtocol,
+          // The date of the check stays unless asked to move it to today (default: keep).
+          ...(current && restamp ? { restampCheckedAt: true } : {}),
           recordedAt: new Date().toISOString(),
         },
       },
@@ -151,7 +155,7 @@ function Body({
       {current && (
         <Text size="sm" c="dimmed">
           Zapsáno: {outcomeLabel(current, riskLevels)} – {current.recordedByName},{' '}
-          {formatDateTime(current.recordedAt)}
+          {formatDateTime(current.recordedAt)} · datum kontroly {formatDate(current.checkedAt)}
         </Text>
       )}
       {!editable && (
@@ -196,6 +200,13 @@ function Body({
       )}
       {editable && (
         <Group>
+          {current && (
+            <Checkbox
+              label={`Změnit datum kontroly na dnešek (teď ${formatDate(current.checkedAt)})`}
+              checked={restamp}
+              onChange={(e) => setRestamp(e.currentTarget.checked)}
+            />
+          )}
           <Button onClick={save} loading={record.isPending} disabled={!choice}>
             Uložit výsledek
           </Button>

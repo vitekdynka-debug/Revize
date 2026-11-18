@@ -195,3 +195,39 @@ describe('deleting an inspection', () => {
     expect(audit.some((e) => e.action === 'inspection.delete' && e.entityId === id)).toBe(true);
   });
 });
+
+describe('date of the check', () => {
+  it('keeps the first recording; the office moves it only when asked', async () => {
+    const customers = (await api('GET', '/api/customers')).json<{ id: string }[]>();
+    const site = (await api('GET', `/api/customers/${customers[0]!.id}/sites`)).json<
+      { id: string }[]
+    >()[0]!;
+    const id = newId();
+    await api('PUT', `/api/inspections/${id}`, { siteId: site.id, inspectionDate: '2026-11-12' });
+    const item = (await api('GET', `/api/inspections/${id}/items`)).json<{ id: string }[]>()[0]!;
+    const resultId = newId();
+    const put = (recordedAt: string, extra: object = {}) =>
+      api('PUT', `/api/inspections/${id}/results/${item.id}`, {
+        id: resultId,
+        outcome: 'ok',
+        recordedAt,
+        ...extra,
+      });
+    expect((await put('2026-11-12T08:00:00.000Z')).json().checkedAt).toBe(
+      '2026-11-12T08:00:00.000Z',
+    );
+    // A later change (field or office) keeps the date of the check.
+    expect((await put('2026-11-14T10:00:00.000Z')).json().checkedAt).toBe(
+      '2026-11-12T08:00:00.000Z',
+    );
+    // The office asked to move it.
+    expect(
+      (await put('2026-11-15T10:00:00.000Z', { restampCheckedAt: true })).json().checkedAt,
+    ).toBe('2026-11-15T10:00:00.000Z');
+
+    // The protocol prints the days of the checks and the next date before closing.
+    const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(html).toContain('15/11/2026');
+    expect(html).toContain('Datum kontroly');
+  });
+});
