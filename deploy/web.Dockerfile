@@ -16,6 +16,8 @@ COPY tsconfig.base.json ./
 COPY packages packages
 COPY apps/web apps/web
 COPY apps/spike-qr apps/spike-qr
+# The user guides are built into the app (Návody, apps/web/src/guides).
+COPY docs docs
 RUN pnpm --filter @revize/web build \
  && BASE_PATH=/spike/ pnpm --filter @revize/spike-qr build
 
