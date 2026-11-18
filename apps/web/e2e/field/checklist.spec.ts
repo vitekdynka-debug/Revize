@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createData, login, sheet, startInspection } from './helpers.js';
+import { PHOTO, createData, login, sheet, startInspection } from './helpers.js';
 
 test('check points of a rack: NE writes an amber defect with its text', async ({ page }) => {
   await login(page, 'admin@revize.local', 'admin-heslo-123');
@@ -50,4 +50,32 @@ test('check points of a rack: NE writes an amber defect with its text', async ({
       severity: 'amber',
       checks: { floor_anchoring: true, load_sign: false },
     });
+
+  // Undoing the result warns about its defect photos and deletes them too (no stuck change).
+  await page.getByText('Vše (', { exact: false }).first().click();
+  await page.getByTestId('item-NH77').click();
+  const chooser = page.waitForEvent('filechooser');
+  await card.getByRole('button', { name: 'Vyfotit' }).first().click();
+  await (await chooser).setFiles(PHOTO);
+  await page
+    .getByRole('dialog', { name: 'Upravit fotku' })
+    .getByRole('button', { name: 'Uložit fotku' })
+    .click();
+  await expect(card.getByText('Fotky závady (1)')).toBeVisible();
+  const asked = page.waitForEvent('dialog');
+  const undo = card.getByRole('button', { name: 'Zrušit výsledek' }).click();
+  const dialog = await asked;
+  expect(dialog.message()).toContain('smaže se 1 fotka závady');
+  await dialog.accept();
+  await undo;
+  await expect(card).toBeHidden();
+  await expect(page.getByText('Vše odesláno')).toBeVisible();
+  await expect
+    .poll(async () => {
+      const items = (await (
+        await page.request.get(`/api/inspections/${inspectionId}/items`)
+      ).json()) as { designation: string; result: unknown }[];
+      return items.find((i) => i.designation === 'NH77')?.result;
+    })
+    .toBeNull();
 });

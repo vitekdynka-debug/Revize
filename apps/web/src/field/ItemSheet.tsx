@@ -607,18 +607,31 @@ function SheetBody({
             color="gray"
             loading={removeResult.isPending}
             onClick={() => {
-              if (!window.confirm('Zrušit zapsaný výsledek? Artikl bude znovu nezkontrolovaný.'))
-                return;
-              removeResult.mutate(
-                { itemId: item.id },
-                {
-                  onSuccess: () => {
-                    clearDefectDraft(inspectionId, item.id);
-                    onClose();
+              // The defect photos go with the result (server and this device): ask first.
+              const photoCount = defectPhotos.length + localDefect.length;
+              const warning = photoCount
+                ? `Zrušit zapsaný výsledek? Artikl bude znovu nezkontrolovaný a smaže se ${
+                    photoCount === 1
+                      ? '1 fotka'
+                      : photoCount < 5
+                        ? `${photoCount} fotky`
+                        : `${photoCount} fotek`
+                  } závady. Fotky artiklu zůstanou.`
+                : 'Zrušit zapsaný výsledek? Artikl bude znovu nezkontrolovaný.';
+              if (!window.confirm(warning)) return;
+              void (async () => {
+                for (const p of localDefect) await cancelPhoto(p.id);
+                removeResult.mutate(
+                  { itemId: item.id },
+                  {
+                    onSuccess: () => {
+                      clearDefectDraft(inspectionId, item.id);
+                      onClose();
+                    },
+                    onError: notifyError,
                   },
-                  onError: notifyError,
-                },
-              );
+                );
+              })();
             }}
           >
             Zrušit výsledek

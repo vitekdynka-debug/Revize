@@ -124,8 +124,8 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
 - **Rozepsaná závada** se průběžně ukládá do zařízení: popis zůstane, i když mezitím fotíte,
   kartu zavřete nebo se aplikace po focení znovu načte. Zmizí až po uložení výsledku.
 - Klepnutím do vyplněného pole se kurzor postaví na konec textu.
-- **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Nejdřív je potřeba smazat fotky
-  závady.
+- **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Aplikace upozorní, kolik fotek
+  závady se s výsledkem smaže; fotky artiklu zůstanou.
 
 Když dva technici zapíšou tentýž artikl, platí výsledek zapsaný později. Ten přepsaný zůstane
 v auditu.

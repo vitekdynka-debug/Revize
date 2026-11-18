@@ -238,14 +238,14 @@ describe('photos', () => {
       image.length,
     );
 
-    const blocked = await api('DELETE', `/api/inspections/${id}/results/${first!.id}`);
-    expect(errorCode(blocked)).toBe('result_has_photos');
-    expect((await api('DELETE', `/api/photos/${photoId}`)).statusCode).toBe(204);
-    expect((await api('GET', `/api/photos/${photoId}/thumbnail`)).statusCode).toBe(404);
+    // Undoing the result takes its defect photos with it; the item photo stays.
     expect((await api('DELETE', `/api/inspections/${id}/results/${first!.id}`)).statusCode).toBe(
       204,
     );
+    expect((await api('GET', `/api/photos/${photoId}/thumbnail`)).statusCode).toBe(404);
     expect((await itemsOf(id))[0]!.result).toBeNull();
+    const left = (await api('GET', `/api/photos?itemId=${first!.id}&inspectionId=${id}`)).json();
+    expect(left.map((p: { owner: string }) => p.owner)).toEqual(['item']);
   });
 
   it('rejects files that are not images and missing owners', async () => {

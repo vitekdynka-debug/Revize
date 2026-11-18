@@ -864,8 +864,12 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
     },
 
     /** Back to "not checked". Defect photos have to be deleted first. */
+    /**
+     * Undoes an item's result: the item is unchecked again. The defect photos of the result go
+     * with it (the field asks first); item photos stay.
+     */
     async deleteResult(auth: AuthContext, inspectionId: string, itemId: string): Promise<void> {
-      await db.transaction(async (tx) => {
+      const removed = await db.transaction(async (tx) => {
         const row = await lockInspection(tx, auth, inspectionId);
         if (row.status === 'closed') throw inspectionClosed();
         const [existing] = await tx
@@ -878,14 +882,13 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
             ),
           )
           .for('update');
-        if (!existing) return;
-        const [photos] = await tx
-          .execute<{ count: number }>(
-            sql`select count(*)::int as count from photo where inspection_result_id = ${existing.id}`,
-          )
-          .then((r) => r.rows);
-        if ((photos?.count ?? 0) > 0) {
-          throw conflict('result_has_photos', 'Nejdřív smažte fotky závady.');
+        if (!existing) return [];
+        const photos = await tx
+          .delete(photo)
+          .where(eq(photo.inspectionResultId, existing.id))
+          .returning();
+        for (const p of photos) {
+          await audit(tx, auth, 'photo.delete', 'photo', p.id, p, null, 'Zrušení výsledku');
         }
         await tx.delete(inspectionResult).where(eq(inspectionResult.id, existing.id));
         await audit(
@@ -895,9 +898,15 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
           'inspection_result',
           existing.id,
           existing,
-          null,
+          { deletedPhotos: photos.length },
         );
+        return photos;
       });
+      // Files after the commit: a failed undo keeps them.
+      for (const p of removed) {
+        await files?.delete(p.storageKey);
+        if (p.thumbnailKey) await files?.delete(p.thumbnailKey);
+      }
     },
   };
 }
