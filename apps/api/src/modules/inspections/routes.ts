@@ -174,6 +174,22 @@ export const inspectionsRoutes: FastifyPluginAsyncZod<{ inspections: Inspections
     (req) => inspections.reopen(authOf(req), req.params.id, req.body.reason),
   );
   app.delete(
+    '/inspections/:id',
+    {
+      preHandler: requirePermission('inspection.delete'),
+      schema: {
+        tags,
+        summary: 'Smazat kontrolu i s výsledky a fotkami (např. zkušební)',
+        params,
+        response: { 204: z.null(), ...errors },
+      },
+    },
+    async (req, reply) => {
+      await inspections.remove(authOf(req), req.params.id);
+      return reply.code(204).send(null);
+    },
+  );
+  app.delete(
     '/inspections/:id/results/:itemId',
     {
       preHandler: perform,

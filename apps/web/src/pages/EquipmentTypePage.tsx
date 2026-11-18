@@ -7,6 +7,7 @@ import {
   Group,
   List,
   Modal,
+  MultiSelect,
   NumberInput,
   Paper,
   Select,
@@ -416,6 +417,29 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
                         />
                       )}
                     </SimpleGrid>
+                    {(f.kind === 'number' || f.kind === 'integer') && (
+                      <MultiSelect
+                        label="Předvyplnit jako součin polí (nepovinné)"
+                        description="Např. nosnost pole = nosnost úrovně × počet úrovní; jde přepsat"
+                        placeholder="Vyberte 2–4 číselná pole"
+                        disabled={!canWrite}
+                        maxValues={4}
+                        clearable
+                        data={fields
+                          .filter(
+                            (o) =>
+                              o.uid !== f.uid &&
+                              !o.archived &&
+                              (o.kind === 'number' || o.kind === 'integer'),
+                          )
+                          .map((o) => ({ value: o.key, label: o.label || o.key }))}
+                        value={f.defaultProduct ?? []}
+                        error={err('defaultProduct')}
+                        onChange={(keys) =>
+                          patch(f.uid, { defaultProduct: keys.length ? keys : undefined })
+                        }
+                      />
+                    )}
                     {(f.kind === 'select' || f.kind === 'multiselect') && (
                       <TagsInput
                         label="Hodnoty číselníku"

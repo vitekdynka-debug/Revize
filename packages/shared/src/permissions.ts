@@ -18,6 +18,8 @@ export const PERMISSIONS = [
   'inspection.perform',
   'inspection.close',
   'inspection.reopen',
+  /** Delete a whole inspection with its results and photos (test inspections; administrators). */
+  'inspection.delete',
   'export.read',
   'settings.manage',
 ] as const;

@@ -24,6 +24,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Druh pole** jde změnit i u uloženého pole a u typů z knihovny (např. text → číslo). Před
      uložením se ukáže, kolik hodnot u artiklů se převede a které ne. Ty, které převést nejde,
      zůstanou jako text k opravě a původní hodnoty jsou v auditu.
+   - **Předvyplnit jako součin polí** (u číselného pole): např. _Nosnost pole_ = _Nosnost
+     úrovně_ × _Počet úrovní_. Ve formuláři artiklu se hodnota spočítá sama, dokud ji nepřepíšete.
+   - U celočíselných polí (počty) začne šipka nahoru na prázdném poli od 1.
    - **Text protokolu** se zástupnými údaji (Zákazník, Datum kontroly…) a náhled.
    - **Hodnocení rizika podle ČSN EN 15635** (zelená / žlutá / červená) je zapnuté jen u regálů.
      U ostatních typů technik hodnotí **Vyhovuje / Závada – provoz možný / Nevyhovuje**. V protokolu
@@ -199,6 +202,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
       kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
       Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
     - **Znovu otevřít:** jen s uvedením důvodu, zapíše se do auditu.
+    - **Smazat kontrolu** (administrátor): smaže kontrolu i s výsledky a fotkami závad, např.
+      zkušební kontrolu. Nejde vrátit zpět; artikly zůstanou a datum příští kontroly ani
+      vyřazení z provozu, které kontrola zapsala, se nemění. Zapíše se do historie změn.
     - **Export:**
       - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
       - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.

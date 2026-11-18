@@ -24,8 +24,9 @@ import {
   type InspectionResult,
   itemLabel,
 } from '@revize/shared';
-import { IconFileText, IconLock, IconLockOpen, IconPencil } from '@tabler/icons-react';
-import { useParams } from '@tanstack/react-router';
+import { IconFileText, IconLock, IconLockOpen, IconPencil, IconTrash } from '@tabler/icons-react';
+import { useNavigate, useParams } from '@tanstack/react-router';
+import { modals } from '@mantine/modals';
 import { useMemo, useState, type FormEvent } from 'react';
 import {
   useCloseInspection,
@@ -35,6 +36,7 @@ import {
   useInspectionItems,
   useMe,
   useReopenInspection,
+  useDeleteInspection,
   useSetPhotosInProtocol,
 } from '../api/hooks.js';
 import { ExportMenu } from '../components/ExportMenu.js';
@@ -194,6 +196,29 @@ export function InspectionDetailPage() {
     [types.data],
   );
   const photosInProtocol = useSetPhotosInProtocol(inspectionId);
+  const remove = useDeleteInspection();
+  const navigate = useNavigate();
+  const confirmDelete = () =>
+    modals.openConfirmModal({
+      title: 'Smazat kontrolu?',
+      children: (
+        <Text size="sm">
+          Kontrola se smaže i se všemi výsledky a fotkami závad (např. zkušební kontrola). Nejde to
+          vrátit zpět. Artikly v evidenci zůstanou; datum příští kontroly ani vyřazení z provozu,
+          které kontrola zapsala, se nemění. Smazání se zapíše do historie změn.
+        </Text>
+      ),
+      labels: { confirm: 'Smazat kontrolu', cancel: 'Zrušit' },
+      confirmProps: { color: 'red' },
+      onConfirm: () =>
+        remove.mutate(inspectionId, {
+          onSuccess: () => {
+            notifySaved('Kontrola smazána');
+            void navigate({ to: '/kontroly' });
+          },
+          onError: notifyError,
+        }),
+    });
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const typeById = useMemo(() => new Map((types.data ?? []).map((t) => [t.id, t])), [types.data]);
 
@@ -248,6 +273,17 @@ export function InspectionDetailPage() {
           {open && can('inspection.close') && (
             <Button leftSection={<IconLock size={18} />} onClick={() => setDialog('close')}>
               Uzavřít kontrolu
+            </Button>
+          )}
+          {can('inspection.delete') && (
+            <Button
+              variant="subtle"
+              color="red"
+              leftSection={<IconTrash size={18} />}
+              loading={remove.isPending}
+              onClick={confirmDelete}
+            >
+              Smazat kontrolu
             </Button>
           )}
           {!open && can('inspection.reopen') && (

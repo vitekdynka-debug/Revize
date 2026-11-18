@@ -67,6 +67,7 @@ const ACTION_LABELS: Record<string, string> = {
   'inspection.join': 'Připojení technika ke kontrole',
   'inspection.close': 'Uzavření kontroly',
   'inspection.reopen': 'Znovuotevření kontroly',
+  'inspection.delete': 'Smazání kontroly',
   'inspection.result': 'Zápis výsledku',
   'inspection.result_update': 'Změna výsledku',
   'inspection.result_overruled': 'Výsledek přepsán novějším',

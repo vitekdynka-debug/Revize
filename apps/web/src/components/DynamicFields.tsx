@@ -78,6 +78,9 @@ export function DynamicFields({
                 {...common}
                 decimalSeparator=","
                 allowDecimal={field.kind === 'number'}
+                // The ▲ arrow on an empty count starts at 1, not 0 (counts start at one).
+                startValue={field.kind === 'integer' ? 1 : 0}
+                min={field.kind === 'integer' ? 0 : undefined}
                 rightSection={
                   field.unit ? (
                     <Text size="xs" c="dimmed">

@@ -150,3 +150,48 @@ describe('check points (ADR-0021)', () => {
     expect(listed.find((i) => i.id === item.id)!.result!.checks.load_sign).toBe(false);
   });
 });
+
+describe('deleting an inspection', () => {
+  it('removes it with its results; technicians may not', async () => {
+    const customers = (await api('GET', '/api/customers')).json<{ id: string }[]>();
+    const site = (await api('GET', `/api/customers/${customers[0]!.id}/sites`)).json<
+      { id: string }[]
+    >()[0]!;
+    const id = newId();
+    await api('PUT', `/api/inspections/${id}`, { siteId: site.id, inspectionDate: '2026-11-18' });
+    const item = (await api('GET', `/api/inspections/${id}/items`)).json<{ id: string }[]>()[0]!;
+    await api('PUT', `/api/inspections/${id}/results/${item.id}`, {
+      id: newId(),
+      outcome: 'ok',
+      recordedAt: new Date().toISOString(),
+    });
+
+    await api('POST', '/api/users', {
+      email: 'tech@test.cz',
+      displayName: 'T',
+      role: 'inspector',
+      password: 'technik-heslo-1',
+    });
+    const { token: inspector } = await ctx.login('tech@test.cz', 'technik-heslo-1');
+    const forbidden = await ctx.app.inject({
+      method: 'DELETE',
+      url: `/api/inspections/${id}`,
+      headers: bearer(inspector),
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const deleted = await ctx.app.inject({
+      method: 'DELETE',
+      url: `/api/inspections/${id}`,
+      headers: bearer(token),
+    });
+    expect(deleted.statusCode, deleted.body).toBe(204);
+    expect((await api('GET', `/api/inspections/${id}`)).statusCode).toBe(404);
+    // The item stays in the records.
+    expect((await api('GET', `/api/items/${item.id}`)).statusCode).toBe(200);
+    const audit = (await api('GET', '/api/audit?entityType=inspection')).json<
+      { action: string; entityId: string }[]
+    >();
+    expect(audit.some((e) => e.action === 'inspection.delete' && e.entityId === id)).toBe(true);
+  });
+});

@@ -13,7 +13,7 @@ import {
   type recordResultSchema,
   type startInspectionSchema,
 } from '@revize/shared';
-import { aliasedTable, and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
@@ -737,6 +737,54 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
         if (p.thumbnailKey) await files?.delete(p.thumbnailKey);
       }
       return get(db, auth, id);
+    },
+
+    /**
+     * Deletes the inspection with its results and their photos (e.g. a test inspection).
+     * Items stay as they are (out of service, next inspection date); the audit keeps a record.
+     */
+    async remove(auth: AuthContext, id: string): Promise<void> {
+      const removed = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(inspection)
+          .where(and(eq(inspection.id, id), eq(inspection.organizationId, auth.organizationId)))
+          .for('update');
+        if (!row) throw notFound('Kontrola neexistuje.');
+        const results = await tx
+          .select({ id: inspectionResult.id })
+          .from(inspectionResult)
+          .where(eq(inspectionResult.inspectionId, id));
+        const resultIds = results.map((r) => r.id);
+        const photos = await tx
+          .select({ id: photo.id, storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey })
+          .from(photo)
+          .where(
+            resultIds.length
+              ? or(eq(photo.inspectionId, id), inArray(photo.inspectionResultId, resultIds))
+              : eq(photo.inspectionId, id),
+          );
+        if (photos.length) {
+          await tx.delete(photo).where(
+            inArray(
+              photo.id,
+              photos.map((p) => p.id),
+            ),
+          );
+        }
+        await tx.delete(inspectionResult).where(eq(inspectionResult.inspectionId, id));
+        await tx.delete(inspection).where(eq(inspection.id, id));
+        await audit(tx, auth, 'inspection.delete', 'inspection', id, row, {
+          deletedResults: resultIds.length,
+          deletedPhotos: photos.length,
+        });
+        return photos;
+      });
+      // Files after the commit: a failed delete keeps them.
+      for (const p of removed) {
+        await files?.delete(p.storageKey);
+        if (p.thumbnailKey) await files?.delete(p.thumbnailKey);
+      }
     },
 
     /** What closing would delete (shown in the close dialog). */

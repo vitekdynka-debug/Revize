@@ -841,6 +841,13 @@ export const useCloseInspection = () =>
       api.post<Inspection>(`/inspections/${id}/close`, body),
     [['inspections'], ['inspection-items'], ['items']],
   );
+/** Deletes the inspection with its results and photos (test inspections). */
+export const useDeleteInspection = () =>
+  useApiMutation(
+    (id: string) => api.delete(`/inspections/${id}`),
+    [['inspections'], ['inspection-items']],
+  );
+
 export const useReopenInspection = () =>
   useApiMutation(
     ({ id, reason }: { id: string; reason: string }) =>
