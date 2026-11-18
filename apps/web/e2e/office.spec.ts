@@ -289,3 +289,16 @@ test('admin merges the old rack types into one (Sloučit typy)', async ({ page }
   // The merged type with the kind field.
   await expect(page.getByLabel('Název typu')).toHaveValue('Sklad');
 });
+
+test('guides are in the app (Návody) and link to each other', async ({ page }) => {
+  await login(page);
+  await page.getByRole('navigation').getByRole('link', { name: 'Návody' }).click();
+  await expect(page.getByRole('heading', { name: 'Návody' })).toBeVisible();
+  await page.getByText('Kancelář', { exact: true }).click();
+  const guide = page.getByTestId('guide');
+  await expect(guide.getByRole('heading', { level: 1 })).toContainText('Kancelář');
+  await guide.locator('a[data-guide="typy-vybaveni"]').first().click();
+  await expect(page.getByTestId('guide').getByRole('heading', { level: 1 })).toContainText(
+    'Typy vybavení',
+  );
+});

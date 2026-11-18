@@ -1,6 +1,7 @@
 import { AppShell, Burger, Group, Menu, NavLink, Text, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconBook,
   IconBuildingWarehouse,
   IconChevronDown,
   IconClipboardCheck,
@@ -21,7 +22,7 @@ import { useLogout, useOutbox } from '../api/hooks.js';
 import { DemoBadge, DemoResetItem } from '../demo/DemoParts.js';
 import { AuthGate } from './AuthGate.js';
 
-const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permission }[] = [
+const NAV: { to: string; label: string; icon: typeof IconUser; permission?: Permission }[] = [
   {
     to: '/zakaznici',
     label: 'Zákazníci',
@@ -41,6 +42,8 @@ const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permi
     icon: IconClipboardCheck,
     permission: 'inspection.perform',
   },
+  // For everybody.
+  { to: '/navody', label: 'Návody', icon: IconBook },
 ];
 
 /** User name with "my account", logout (and the demo reset) – office and field header. */
@@ -70,6 +73,12 @@ export function UserMenu({ user }: { user: CurrentUser }) {
           onClick={() => void navigate({ to: '/ucet' })}
         >
           Můj účet
+        </Menu.Item>
+        <Menu.Item
+          leftSection={<IconBook size={16} />}
+          onClick={() => void navigate({ to: '/navody' })}
+        >
+          Návody
         </Menu.Item>
         <Menu.Item
           leftSection={<IconLogout size={16} />}
@@ -125,7 +134,7 @@ function OfficeShell({ user }: { user: CurrentUser }) {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="xs">
-        {NAV.filter((n) => user.permissions.includes(n.permission)).map((n) => (
+        {NAV.filter((n) => !n.permission || user.permissions.includes(n.permission)).map((n) => (
           <NavLink
             key={n.to}
             component={Link}

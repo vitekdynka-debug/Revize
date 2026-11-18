@@ -14,6 +14,7 @@ import { FieldLayout } from './field/FieldLayout.js';
 import { InspectionPage } from './field/InspectionPage.js';
 import { AccountPage } from './pages/AccountPage.js';
 import { AuditPage } from './pages/AuditPage.js';
+import { GuidePage, GuidesPage } from './pages/GuidesPage.js';
 import { CustomerPage } from './pages/CustomerPage.js';
 import { CustomersPage } from './pages/CustomersPage.js';
 import { EquipmentTypePage } from './pages/EquipmentTypePage.js';
@@ -150,6 +151,16 @@ const auditRoute = createRoute({
   path: '/historie-zmen',
   component: AuditPage,
 });
+const guidesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/navody',
+  component: GuidesPage,
+});
+const guideRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/navody/$slug',
+  component: GuidePage,
+});
 
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -174,6 +185,8 @@ const routeTree = rootRoute.addChildren([
     inspectionDetailRoute,
     settingsRoute,
     auditRoute,
+    guidesRoute,
+    guideRoute,
     accountRoute,
   ]),
 ]);

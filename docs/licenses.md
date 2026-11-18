@@ -27,6 +27,7 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 | @noble/hashes, buffer                      | MIT                             | náhrady Node modulů v ukázce            | M5     |
 | Caddy                                      | Apache-2.0                      | reverse proxy, HTTPS                    | M2     |
 | Noto Sans (fonty)                          | OFL-1.1                         | písmo PDF protokolu                     | M7     |
+| marked                                     | MIT                             | návody v aplikaci (Markdown z docs/)    | návody |
 
 ## Schválené výjimky
 
