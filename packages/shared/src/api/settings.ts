@@ -43,3 +43,15 @@ export const LOGO_LIMITS = {
   maxBytes: 2 * 1024 * 1024,
   mimeTypes: ['image/png', 'image/jpeg'],
 } as const;
+
+/**
+ * `GET /showcase` (public): a showcase instance for presentations offers its accounts on the
+ * login page (ADR-0023); their passwords are public on purpose. Disabled on real servers.
+ */
+export const showcaseInfoSchema = z.object({
+  enabled: z.boolean(),
+  accounts: z.array(z.object({ label: z.string(), email: z.string(), password: z.string() })),
+  /** Hour (Czech time) the data go back to the start; null = never. */
+  resetHour: z.number().int().nullable(),
+});
+export type ShowcaseInfo = z.infer<typeof showcaseInfoSchema>;

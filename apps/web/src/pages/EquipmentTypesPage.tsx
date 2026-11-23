@@ -23,6 +23,7 @@ import {
   useMe,
 } from '../api/hooks.js';
 import { MergeTypesDialog } from '../components/MergeTypesDialog.js';
+import { TypeSettingsTransfer } from '../components/TypeSettingsTransfer.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 function NewTypeDialog({ onCreated }: { onCreated: (id: string) => void }) {
@@ -111,14 +112,17 @@ export function EquipmentTypesPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Typy vybavení</Title>
-        {canWrite && (
-          <Group>
-            <Button variant="default" onClick={merge.open}>
-              Sloučit typy…
-            </Button>
-            <Button onClick={open}>Nový typ</Button>
-          </Group>
-        )}
+        <Group>
+          <TypeSettingsTransfer canWrite={!!canWrite} />
+          {canWrite && (
+            <Group>
+              <Button variant="default" onClick={merge.open}>
+                Sloučit typy…
+              </Button>
+              <Button onClick={open}>Nový typ</Button>
+            </Group>
+          )}
+        </Group>
       </Group>
       <Switch
         label="Zobrazit archivované"

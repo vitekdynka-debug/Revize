@@ -11,6 +11,7 @@ import {
 import { useRouter, useSearch } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { DEMO } from '../api/client.js';
+import { ShowcaseLoginHint } from '../components/ShowcaseLoginHint.js';
 import { useLogin } from '../api/hooks.js';
 import { DemoLoginHint } from '../demo/DemoParts.js';
 
@@ -49,6 +50,14 @@ export function LoginPage() {
                 onPick={(demoEmail, demoPassword) => {
                   setEmail(demoEmail);
                   setPassword(demoPassword);
+                }}
+              />
+            )}
+            {!DEMO && (
+              <ShowcaseLoginHint
+                onPick={(showcaseEmail, showcasePassword) => {
+                  setEmail(showcaseEmail);
+                  setPassword(showcasePassword);
                 }}
               />
             )}

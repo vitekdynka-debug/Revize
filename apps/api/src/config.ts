@@ -41,6 +41,18 @@ const envSchema = z.object({
   STORAGE_MAX_GB: z.coerce.number().positive().optional(),
   /** Fill an empty database with demo data (customer, equipment types, items). */
   SEED_DEMO: bool.default(false),
+  /**
+   * Showcase instance for presentations (ADR-0023): its own database is filled with the
+   * showcase data and reset every night; the login page offers the accounts.
+   */
+  SHOWCASE: bool.default(false),
+  /** Password of the showcase accounts (administrator unless ADMIN_PASSWORD, technician). */
+  SHOWCASE_PASSWORD: z.string().default('ukazka-revize'),
+  /** Hour (Czech time) of the nightly reset; -1 = no reset. */
+  SHOWCASE_RESET_HOUR: z.coerce.number().int().min(-1).max(23).default(3),
+  SHOWCASE_ASSETS_DIR: z
+    .string()
+    .default(fileURLToPath(new URL('../assets/showcase', import.meta.url))),
 });
 
 export type Config = z.infer<typeof envSchema>;

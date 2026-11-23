@@ -27,3 +27,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0020](0020-optional-item-number.md)           | Artikl bez čísla TZ                                             | přijato                         |
 | [0021](0021-checklist.md)                      | Kontrolní body ANO / NE u typu vybavení                         | přijato                         |
 | [0022](0022-extra-permissions.md)              | Oprávnění navíc k roli                                          | přijato                         |
+| [0023](0023-showcase.md)                       | Ukázková instance pro prezentace                                | přijato                         |

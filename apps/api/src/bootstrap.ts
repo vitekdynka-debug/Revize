@@ -16,8 +16,9 @@ import { seedDemo } from './seed/demo.js';
 export async function bootstrap(db: Db, config: Config, log: FastifyBaseLogger): Promise<void> {
   if ((await usersRepository.countAll(db)) > 0) return;
 
-  const generated = config.ADMIN_PASSWORD === undefined || config.ADMIN_PASSWORD === '';
-  const password = generated ? randomBytes(12).toString('base64url') : config.ADMIN_PASSWORD!;
+  const given = config.ADMIN_PASSWORD || (config.SHOWCASE ? config.SHOWCASE_PASSWORD : '');
+  const generated = !given;
+  const password = generated ? randomBytes(12).toString('base64url') : given;
   const organizationId = newId();
   const adminId = newId();
 

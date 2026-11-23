@@ -32,6 +32,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      U ostatních typů technik hodnotí **Vyhovuje / Závada – provoz možný / Nevyhovuje**. V protokolu
      jsou závady ve skupinách „Závady nebránící bezpečnému provozu“ (ANO, zůstává v provozu)
      a „Závady bránící bezpečnému provozu“ (NE, vyřazeno z provozu), vždy i s fotkami.
+   - **Stáhnout nastavení / Nahrát nastavení** (nahoře v Typech vybavení): nastavení všech typů
+     jako soubor JSON, např. pro přenos do ukázkové instance nebo na jiný server. Při nahrání
+     se typ stejného názvu upraví, jinak se založí; co pravidla nedovolí (např. odebrání pole,
+     které artikly používají), se přeskočí s důvodem.
    - **Kontrolní body v terénu:** otázky, na které technik u každého artiklu odpoví ANO / NE
      (regály: _Kotvení do podlahy_, _Štítek s nosností_). Ke každému bodu text závady a úroveň
      (výchozí žlutá). Při NE se závada zapíše s tímto textem. Body jde přidat, upravit a odebrat;

@@ -9,6 +9,8 @@ import {
   equipmentTypeSchema,
   idSchema,
   updateEquipmentTypeSchema,
+  equipmentTypesExportSchema,
+  equipmentTypesImportResultSchema,
 } from '@revize/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -95,6 +97,31 @@ export const equipmentTypesRoutes: FastifyPluginAsyncZod<{ types: EquipmentTypes
       },
     },
     (req) => types.update(authOf(req), req.params.id, req.body),
+  );
+  app.get(
+    '/equipment-types/export',
+    {
+      preHandler: read,
+      schema: {
+        tags,
+        summary: 'Nastavení typů vybavení ke zkopírování do jiné instance (JSON)',
+        response: { 200: equipmentTypesExportSchema },
+      },
+    },
+    (req) => types.exportSettings(authOf(req)),
+  );
+  app.post(
+    '/equipment-types/import',
+    {
+      preHandler: write,
+      schema: {
+        tags,
+        summary: 'Nahrát nastavení typů z jiné instance (podle názvu: upraví nebo založí)',
+        body: equipmentTypesExportSchema,
+        response: { 200: equipmentTypesImportResultSchema, ...errors },
+      },
+    },
+    (req) => types.importSettings(authOf(req), req.body),
   );
   app.post(
     '/equipment-types/merge-preview',

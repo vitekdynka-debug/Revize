@@ -131,3 +131,26 @@ it('renames a type to the name of an archived (merged) type', async () => {
   });
   expect(taken.statusCode).toBe(409);
 });
+
+it('copies the settings of the types into another instance (export → import by name)', async () => {
+  const exported = await api('GET', '/api/equipment-types/export');
+  expect(exported.statusCode, exported.body).toBe(200);
+  const data = exported.json();
+  expect(data.format).toBe('revize-typy-vybaveni');
+  const ladder = data.types.find((t: { name: string }) => t.name === 'Žebřík');
+  expect(ladder.fieldDefinitions.length).toBeGreaterThan(0);
+  // The other instance: an edited ladder and a new type of its own.
+  const imported = await api('POST', '/api/equipment-types/import', {
+    ...data,
+    types: [
+      { ...ladder, defaultIntervalMonths: 6 },
+      { ...ladder, name: 'Žebřík firemní' },
+    ],
+  });
+  expect(imported.statusCode, imported.body).toBe(200);
+  expect(imported.json()).toMatchObject({ created: ['Žebřík firemní'], updated: ['Žebřík'] });
+  const types = (await api('GET', '/api/equipment-types')).json<
+    { name: string; defaultIntervalMonths: number }[]
+  >();
+  expect(types.find((t) => t.name === 'Žebřík')!.defaultIntervalMonths).toBe(6);
+});

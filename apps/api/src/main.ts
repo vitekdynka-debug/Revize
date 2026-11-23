@@ -9,6 +9,7 @@ import { ExifToolMetadataWriter } from './infra/exiftool-metadata-writer.js';
 import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 import { checkPhotoFiles } from './infra/check-photo-files.js';
+import { startShowcase } from './showcase.js';
 
 // Build time of the image (apps/api/Dockerfile), shown in the office under Nastavení.
 try {
@@ -39,6 +40,15 @@ try {
     app.log.info('Databázové migrace jsou aktuální.');
   }
   await bootstrap(database.db, config, app.log);
+  if (config.SHOWCASE) {
+    await startShowcase({
+      db: database.db,
+      config,
+      files,
+      images: new SharpImageProcessor(),
+      log: app.log,
+    });
+  }
   await checkPhotoFiles(database.db, files, config.FILES_DIR, app.log);
   await app.listen({ host: config.HOST, port: config.PORT });
 } catch (error) {

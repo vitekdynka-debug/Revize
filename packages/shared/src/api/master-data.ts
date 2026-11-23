@@ -195,6 +195,26 @@ export const createEquipmentTypeSchema = z.union([
     name: equipmentTypeFields.name.optional(),
   }),
 ]);
+/** The settings of one type as exported (no ids: imported by name into another instance). */
+export const equipmentTypeSettingsSchema = z.object({
+  ...equipmentTypeFields,
+  checklist: equipmentTypeFields.checklist.default([]),
+});
+/** `GET /equipment-types/export`: the types of the organization to copy into another instance. */
+export const equipmentTypesExportSchema = z.object({
+  format: z.literal('revize-typy-vybaveni'),
+  version: z.literal(1),
+  exportedAt: z.string(),
+  types: z.array(equipmentTypeSettingsSchema).max(200),
+});
+export type EquipmentTypesExport = z.infer<typeof equipmentTypesExportSchema>;
+export const equipmentTypesImportResultSchema = z.object({
+  created: z.array(z.string()),
+  updated: z.array(z.string()),
+  skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
+});
+export type EquipmentTypesImportResult = z.infer<typeof equipmentTypesImportResultSchema>;
+
 export const updateEquipmentTypeSchema = z
   .object({ ...equipmentTypeFields, archived: archivedFlag })
   .partial()

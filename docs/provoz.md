@@ -91,6 +91,26 @@ scripts/smoke-test.sh https://revize.vase-domena.cz admin@firma.cz '<heslo>'
 - Technici: v kanceláři **Uživatelé → Nový uživatel** s rolí Technik. Na iPadu otevřete adresu
   v Safari a zvolte **Sdílet → Přidat na plochu**.
 
+## Ukázka pro prezentace (samostatná instance)
+
+Na stejném serveru může běžet **ukázková instance** se smyšlenými daty, kterou můžete
+předvádět a nechat si s ní lidi hrát. Má vlastní databázi i fotky, s ostrou instancí nesdílí
+nic. Každou noc ve 3:00 se vrátí do výchozího stavu (ADR-0023).
+
+1. V Dokploy založte **novou** aplikaci typu Docker Compose ze stejného repozitáře a větve
+   `produkce`, soubor `docker-compose.showcase.yml`.
+2. Proměnné: `POSTGRES_PASSWORD` (jiné než u ostré instance), `TRUSTED_ORIGINS`
+   (např. `https://ukazka.vase-domena.cz`), volitelně `SHOWCASE_PASSWORD` (heslo účtů ukázky,
+   výchozí `ukazka-revize`; je vidět na přihlašovací stránce) a `SHOWCASE_RESET_HOUR` (hodina
+   obnovy, `-1` = bez obnovy).
+3. Doménu (např. `ukazka.vase-domena.cz`) nasměrujte na službu `web`, port 80.
+4. Po nasazení se databáze sama naplní (pár sekund). Přihlašovací stránka nabízí účty
+   _Administrátor_ a _Technik_.
+
+**Vlastní typy vybavení v ukázce:** v ostré instanci Typy vybavení → _Stáhnout nastavení_, soubor
+uložte do repozitáře jako `apps/api/assets/showcase/typy-vybaveni.json` (nebo ho v ukázce nahrajte
+tlačítkem _Nahrát nastavení_ – do noční obnovy).
+
 ## Zálohy
 
 `scripts/backup.sh [adresář]` uloží výpis databáze (`db.dump`), všechny soubory (`files.tar.gz`)

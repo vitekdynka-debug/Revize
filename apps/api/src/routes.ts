@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
+import { showcaseInfoSchema } from '@revize/shared';
 import type { Config } from './config.js';
+import { SHOWCASE_INSPECTOR } from './seed/showcase.js';
 import type { Db } from './db/client.js';
 import { auditRoutes } from './modules/audit/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
@@ -52,6 +54,36 @@ export async function registerApiRoutes(
   { db, config, files, images, pdf, metadata }: RouteDeps,
 ) {
   await api.register(healthRoutes, { db });
+  // Showcase instance (ADR-0023): its accounts for the login page; off on real servers.
+  api.get(
+    '/showcase',
+    {
+      schema: {
+        tags: ['Systém'],
+        summary: 'Ukázková instance: přihlašovací účty pro prezentaci',
+        response: { 200: showcaseInfoSchema },
+      },
+    },
+    async () =>
+      config.SHOWCASE
+        ? {
+            enabled: true,
+            accounts: [
+              {
+                label: 'Administrátor',
+                email: config.ADMIN_EMAIL,
+                password: config.ADMIN_PASSWORD || config.SHOWCASE_PASSWORD,
+              },
+              {
+                label: 'Technik',
+                email: SHOWCASE_INSPECTOR.email,
+                password: config.SHOWCASE_PASSWORD,
+              },
+            ],
+            resetHour: config.SHOWCASE_RESET_HOUR >= 0 ? config.SHOWCASE_RESET_HOUR : null,
+          }
+        : { enabled: false, accounts: [], resetHour: null },
+  );
   await api.register(authRoutes, { auth: createAuthService(db, config), config });
   await api.register(usersRoutes, { users: createUsersService(db) });
   await api.register(auditRoutes, { db });

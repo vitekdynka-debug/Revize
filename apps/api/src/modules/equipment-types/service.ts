@@ -14,6 +14,9 @@ import {
   type FieldDefinition,
   type createEquipmentTypeSchema,
   type updateEquipmentTypeSchema,
+  type equipmentTypesExportSchema,
+  type EquipmentTypesExport,
+  type EquipmentTypesImportResult,
 } from '@revize/shared';
 import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import {
@@ -297,6 +300,57 @@ export function createEquipmentTypesService(db: Db) {
         defaultIntervalMonths: p.defaultIntervalMonths,
         fieldCount: p.fieldDefinitions.length,
       }));
+    },
+
+    /** The active types as settings to copy into another instance (no ids, no counts). */
+    async exportSettings(auth: AuthContext): Promise<EquipmentTypesExport> {
+      const all = await this.list(auth);
+      return {
+        format: 'revize-typy-vybaveni',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        types: all.map((t) => ({
+          name: t.name,
+          fieldDefinitions: t.fieldDefinitions,
+          defaultIntervalMonths: t.defaultIntervalMonths,
+          protocolTemplate: t.protocolTemplate,
+          riskLevels: t.riskLevels,
+          checklist: t.checklist,
+        })),
+      };
+    },
+
+    /**
+     * Settings exported from another instance: a type of the same name (active) is updated,
+     * otherwise created. A type whose change the rules refuse (e.g. a field removed that items
+     * use) is skipped with the reason; the others still go in.
+     */
+    async importSettings(
+      auth: AuthContext,
+      data: z.output<typeof equipmentTypesExportSchema>,
+    ): Promise<EquipmentTypesImportResult> {
+      const result: EquipmentTypesImportResult = { created: [], updated: [], skipped: [] };
+      for (const settings of data.types) {
+        const all = await this.list(auth);
+        const existing = all.find(
+          (t) => t.name.toLocaleLowerCase('cs') === settings.name.toLocaleLowerCase('cs'),
+        );
+        try {
+          if (existing) {
+            await this.update(auth, existing.id, { ...settings, version: existing.version });
+            result.updated.push(settings.name);
+          } else {
+            await this.create(auth, settings);
+            result.created.push(settings.name);
+          }
+        } catch (error) {
+          result.skipped.push({
+            name: settings.name,
+            reason: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return result;
     },
 
     async list(auth: AuthContext, includeArchived = false): Promise<EquipmentType[]> {

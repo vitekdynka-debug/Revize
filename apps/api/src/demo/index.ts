@@ -40,6 +40,11 @@ const demoConfig: Config = {
   ADMIN_EMAIL: DEMO_ADMIN.email,
   ADMIN_PASSWORD: DEMO_ADMIN.password,
   SEED_DEMO: true,
+  // The showcase (ADR-0023) runs on a server; the demo has its own data and accounts.
+  SHOWCASE: false,
+  SHOWCASE_PASSWORD: 'technik-demo-heslo',
+  SHOWCASE_RESET_HOUR: -1,
+  SHOWCASE_ASSETS_DIR: '',
 };
 
 /** Applies the server's SQL migrations that the database does not have yet, in order. */

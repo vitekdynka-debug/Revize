@@ -1,0 +1,111 @@
+# Showcase for presentations (ADR-0023): a separate Dokploy compose app with its own database
+# and files, filled with fictitious data and reset every night. Nothing is shared with the real
+# instance (its own project name, volumes and network). Traefik routes HTTPS to web:80.
+# Set required secrets and host-specific values in the Dokploy Compose environment.
+#
+# Internal traffic (web → api → db) uses aliases that exist only on this stack's own network
+# (revize-api, revize-db). web also joins the shared dokploy-network, where plain service names
+# like `api` or `db` of other stacks would answer as well (random 502s, logins against a foreign
+# database).
+name: revize-ukazka
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: revize
+      POSTGRES_USER: revize
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases: [revize-db]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U revize -d revize']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: '${DB_CPU_LIMIT:-1.0}'
+          memory: '${DB_MEMORY_LIMIT:-512M}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://revize@revize-db:5432/revize
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
+      COOKIE_SECURE: 'true'
+      ORG_NAME: ${ORG_NAME:-Revize – ukázka}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revize.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SEED_DEMO: 'false'
+      SHOWCASE: 'true'
+      # Public on the login page on purpose: the showcase has only fictitious data.
+      SHOWCASE_PASSWORD: ${SHOWCASE_PASSWORD:-ukazka-revize}
+      SHOWCASE_RESET_HOUR: ${SHOWCASE_RESET_HOUR:-3}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?Set TRUSTED_ORIGINS to the HTTPS domain}
+      STORAGE_MAX_GB: ${STORAGE_MAX_GB:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - files:/data/files
+    networks:
+      default:
+        aliases: [revize-api]
+    deploy:
+      resources:
+        limits:
+          cpus: '${API_CPU_LIMIT:-2.0}'
+          memory: '${API_MEMORY_LIMIT:-1G}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ':80'
+      API_UPSTREAM: 'revize-api:3000'
+    networks:
+      - default
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '${WEB_CPU_LIMIT:-1.0}'
+          memory: '${WEB_MEMORY_LIMIT:-256M}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
+
+volumes:
+  db-data:
+  files:
+
+networks:
+  dokploy-network:
+    external: true

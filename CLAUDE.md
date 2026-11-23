@@ -166,4 +166,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   (`permissionsOf(role, extra)`), offered by area in the user form (`PERMISSION_GROUPS`).
   Results keep `checked_at` (first recording; office restamps only when asked); protocol lists
   the check days, appendix always has "Datum kontroly"; exports project the next date before closing.
+- Showcase (ADR-0023): `SHOWCASE=true` instance (`docker-compose.showcase.yml`) seeds
+  `seed/showcase.ts` (fictitious customer, 50+ items, drawn photos in `apps/api/assets/showcase`,
+  a closed and an open inspection) and resets nightly (`src/showcase.ts`); `GET /api/showcase`
+  gives the login page its accounts. Type settings export/import (`/equipment-types/export|import`).
 - Next: M1 decision PWA vs Capacitor.

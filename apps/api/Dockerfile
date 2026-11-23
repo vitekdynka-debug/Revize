@@ -28,6 +28,8 @@ COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /out/package.json ./package.json
 COPY --from=build /repo/apps/api/dist ./dist
 COPY --from=build /repo/apps/api/drizzle ./drizzle
+# Illustrative photos of the showcase (SHOWCASE=true, ADR-0023).
+COPY --from=build /repo/apps/api/assets ./assets
 RUN mkdir -p /data/files && chown -R node:node /data
 USER node
 EXPOSE 3000

@@ -47,6 +47,9 @@ import type {
   updateLocationSchema,
   updateSiteSchema,
   updateUserRequestSchema,
+  ShowcaseInfo,
+  EquipmentTypesExport,
+  EquipmentTypesImportResult,
 } from '@revize/shared';
 import {
   useInfiniteQuery,
@@ -953,3 +956,20 @@ export const useColumnValues = (jobId: string, column: number | null) =>
     queryFn: () => api.get(`/imports/${jobId}/columns/${column}/values`),
     enabled: column !== null,
   });
+
+/** Showcase instance (ADR-0023): its accounts for the login page (public, no session needed). */
+export const useShowcaseInfo = () =>
+  useQuery<ShowcaseInfo, ApiRequestError>({
+    queryKey: ['showcase'],
+    queryFn: () => api.get('/showcase'),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+/** Equipment types from another instance (Typy vybavení → Nahrát nastavení). */
+export const useImportTypeSettings = () =>
+  useApiMutation(
+    (data: EquipmentTypesExport) =>
+      api.post<EquipmentTypesImportResult>('/equipment-types/import', data),
+    [['equipment-types']],
+  );
