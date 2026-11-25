@@ -25,6 +25,7 @@ import {
   type InspectionItem,
   type ProtocolData,
   type ProtocolItem,
+  withCheckedAtColumn,
 } from '@revize/shared';
 import { eq, inArray } from 'drizzle-orm';
 import type { AuthContext } from '../../auth/context.js';
@@ -84,14 +85,7 @@ function appendixOf(
 ): ProtocolData['appendix'] {
   const available = appendixColumns(types);
   // "Datum kontroly" is always in the appendix (next to the location), chosen or not.
-  const withDate = keys.includes('checkedAt')
-    ? keys
-    : (() => {
-        const at = keys.indexOf('location');
-        return at >= 0
-          ? [...keys.slice(0, at + 1), 'checkedAt', ...keys.slice(at + 1)]
-          : [...keys, 'checkedAt'];
-      })();
+  const withDate = withCheckedAtColumn(keys);
   const chosen = withDate
     .map((key) => available.find((c) => c.key === key))
     .filter((c): c is NonNullable<typeof c> => c !== undefined);

@@ -1,5 +1,7 @@
 import {
+  ActionIcon,
   Alert,
+  Badge,
   Button,
   Group,
   Loader,
@@ -11,8 +13,8 @@ import {
   Switch,
   Text,
 } from '@mantine/core';
-import { DEFAULT_APPENDIX_COLUMNS } from '@revize/shared';
-import { IconDownload, IconPrinter } from '@tabler/icons-react';
+import { DEFAULT_APPENDIX_COLUMNS, withCheckedAtColumn } from '@revize/shared';
+import { IconChevronLeft, IconChevronRight, IconDownload, IconPrinter } from '@tabler/icons-react';
 import { useRef, useState } from 'react';
 import { DEMO, downloadFile, queryString } from '../api/client.js';
 import { useOutbox, useProtocolColumns, useProtocolHtml } from '../api/hooks.js';
@@ -74,6 +76,74 @@ function saveColumns(columns: string[]) {
   }
 }
 
+/**
+ * The printed columns left to right (with the always present "Datum kontroly"), each movable
+ * one place left or right.
+ */
+function ColumnOrder({
+  columns,
+  labels,
+  onChange,
+}: {
+  columns: string[];
+  labels: Map<string, string>;
+  onChange: (next: string[]) => void;
+}) {
+  const shown = withCheckedAtColumn(columns).filter((key) => labels.has(key));
+  if (shown.length < 2) return null;
+  const move = (from: number, to: number) => {
+    const next = [...shown];
+    const [key] = next.splice(from, 1);
+    next.splice(to, 0, key!);
+    onChange(next);
+  };
+  return (
+    <div>
+      <Text size="sm" fw={500}>
+        Pořadí sloupců
+      </Text>
+      <Group gap={6} mt={4} aria-label="Pořadí sloupců přílohy 1">
+        {shown.map((key, index) => {
+          const label = labels.get(key)!;
+          return (
+            <Badge
+              key={key}
+              variant="light"
+              size="lg"
+              tt="none"
+              px={4}
+              leftSection={
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  disabled={index === 0}
+                  onClick={() => move(index, index - 1)}
+                  aria-label={`Posunout ${label} doleva`}
+                >
+                  <IconChevronLeft size={14} />
+                </ActionIcon>
+              }
+              rightSection={
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  disabled={index === shown.length - 1}
+                  onClick={() => move(index, index + 1)}
+                  aria-label={`Posunout ${label} doprava`}
+                >
+                  <IconChevronRight size={14} />
+                </ActionIcon>
+              }
+            >
+              {label}
+            </Badge>
+          );
+        })}
+      </Group>
+    </div>
+  );
+}
+
 export interface ProtocolPreviewProps {
   inspectionId: string;
   fileName: string;
@@ -102,6 +172,10 @@ export function ProtocolPreview({
   /** Defects with cards and photos: all, red and yellow, or only red. */
   const [defects, setDefects] = useState<'all' | 'red-amber' | 'red'>('all');
   const [columns, setColumns] = useState<string[]>(loadColumns);
+  const changeColumns = (next: string[]) => {
+    setColumns(next);
+    saveColumns(next);
+  };
   const [shortest, setShortest] = useState(loadShortest);
   // The inspection's own photos (Fotodokumentace) are sometimes only for the office.
   const [hideOverview, setHideOverview] = useState(() => loadFlag(OVERVIEW_KEY));
@@ -279,15 +353,17 @@ export function ProtocolPreview({
           />
           <MultiSelect
             label="Sloupce přílohy 1"
-            description="V pořadí, v jakém je vyberete. Výběr se zapamatuje."
+            description="Pořadí změníte šipkami níže. Výběr se zapamatuje."
             data={(columnOptions.data ?? []).map((c) => ({ value: c.key, label: c.label }))}
             value={columns}
-            onChange={(next) => {
-              setColumns(next);
-              saveColumns(next);
-            }}
+            onChange={changeColumns}
             searchable
             clearable
+          />
+          <ColumnOrder
+            columns={columns}
+            labels={new Map((columnOptions.data ?? []).map((c) => [c.key, c.label]))}
+            onChange={changeColumns}
           />
         </Stack>
         {html.isPending && <Loader m="xl" />}

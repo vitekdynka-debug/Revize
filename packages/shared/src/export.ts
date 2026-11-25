@@ -410,6 +410,18 @@ export function appendixColumns(types: readonly ExportType[]): AppendixColumn[] 
 const RISK_SHORT = { red: 'červené riziko', amber: 'žluté riziko', green: 'zelené riziko' };
 
 /** Preset columns of Příloha 1 (the equipment table on A4 landscape). */
+/**
+ * The appendix columns in print order: "Datum kontroly" is always there, next to the location
+ * unless it was placed explicitly.
+ */
+export function withCheckedAtColumn(keys: readonly string[]): string[] {
+  if (keys.includes('checkedAt')) return [...keys];
+  const at = keys.indexOf('location');
+  return at >= 0
+    ? [...keys.slice(0, at + 1), 'checkedAt', ...keys.slice(at + 1)]
+    : [...keys, 'checkedAt'];
+}
+
 export const DEFAULT_APPENDIX_COLUMNS = [
   'itemNumber',
   'designation',

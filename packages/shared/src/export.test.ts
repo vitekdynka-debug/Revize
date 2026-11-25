@@ -4,6 +4,7 @@ import { fieldDefinitionsSchema } from './equipment-fields.js';
 import {
   appendixColumns,
   appendixRow,
+  withCheckedAtColumn,
   databaseColumns,
   databaseRow,
   historyRow,
@@ -246,5 +247,22 @@ describe('protocol appendix', () => {
         item(),
       ),
     ).toEqual(['10001', '8', '', 'Nezkontrolováno']);
+  });
+});
+
+describe('appendix column order', () => {
+  it('puts Datum kontroly next to the location unless placed explicitly', () => {
+    expect(withCheckedAtColumn(['itemNumber', 'location', 'safe'])).toEqual([
+      'itemNumber',
+      'location',
+      'checkedAt',
+      'safe',
+    ]);
+    expect(withCheckedAtColumn(['itemNumber', 'safe'])).toEqual([
+      'itemNumber',
+      'safe',
+      'checkedAt',
+    ]);
+    expect(withCheckedAtColumn(['checkedAt', 'location'])).toEqual(['checkedAt', 'location']);
   });
 });

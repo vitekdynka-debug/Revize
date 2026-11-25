@@ -140,6 +140,18 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
     'Schopno bezpečného provozu',
     'Poznámka (popis zjištění, závady, doporučení)',
   ]);
+  // The order of the columns can be changed (and is remembered).
+  await page.getByRole('button', { name: 'Posunout Datum kontroly doleva' }).click();
+  await page.getByRole('button', { name: 'Posunout Číslo TZ doprava' }).click();
+  await expect(preview.locator('.appendix th')).toHaveText([
+    'Označení',
+    'Číslo TZ',
+    'Typ vybavení',
+    'Datum kontroly',
+    'Umístění',
+    'Schopno bezpečného provozu',
+    'Poznámka (popis zjištění, závady, doporučení)',
+  ]);
   await page.getByLabel('Tabulku vybavení vždy jako Přílohu 1').uncheck();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Stáhnout', exact: true }).click();
