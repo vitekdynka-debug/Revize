@@ -474,9 +474,16 @@ export function createProtocolsService(
     },
 
     /** Columns that can be chosen for the appendix (fixed ones and the types' fields). */
-    async columns(auth: AuthContext, inspectionId: string): Promise<AppendixColumn[]> {
+    async columns(
+      auth: AuthContext,
+      inspectionId: string,
+      /** The types of the protocol: only their fields can fill a column (empty = all). */
+      equipmentTypeIds: readonly string[] = [],
+    ): Promise<AppendixColumn[]> {
       const items = await inspections.items(auth, inspectionId);
-      const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))];
+      const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))].filter(
+        (id) => !equipmentTypeIds.length || equipmentTypeIds.includes(id),
+      );
       const types = typeIds.length
         ? await db.select().from(equipmentType).where(inArray(equipmentType.id, typeIds))
         : [];

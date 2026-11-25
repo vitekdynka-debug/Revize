@@ -371,6 +371,11 @@ describe('organization settings and protocol', () => {
     expect(columns.map((c: { key: string }) => c.key)).toEqual(
       expect.arrayContaining(['itemNumber', 'designation', 'result', 'field:manufacturer']),
     );
+    // Only the fields of the protocol's types are offered (a type not in it: none).
+    const otherType = (
+      await api('GET', `/api/inspections/${id}/protocol-columns?equipmentTypeIds=${newId()}`)
+    ).json();
+    expect(otherType.some((c: { key: string }) => c.key.startsWith('field:'))).toBe(false);
     const withList = (
       await api(
         'GET',

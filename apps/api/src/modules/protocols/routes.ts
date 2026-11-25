@@ -148,9 +148,16 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
         tags,
         summary: 'Sloupce, které jde vybrat do přílohy protokolu (seznam vybavení)',
         params,
+        /** Only the fields of these types (the types of the protocol); empty = all. */
+        querystring: z.object({ equipmentTypeIds: z.string().max(2000).optional() }),
         response: { 200: z.array(z.object({ key: z.string(), label: z.string() })) },
       },
     },
-    (req) => protocols.columns(authOf(req), req.params.id),
+    (req) =>
+      protocols.columns(
+        authOf(req),
+        req.params.id,
+        (req.query.equipmentTypeIds ?? '').split(',').filter(Boolean),
+      ),
   );
 };

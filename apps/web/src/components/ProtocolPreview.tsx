@@ -167,7 +167,8 @@ export function ProtocolPreview({
 }: ProtocolPreviewProps) {
   /** Types in the protocol: empty = all types of the inspection in one protocol. */
   const [typeIds, setTypeIds] = useState<string[]>([]);
-  const columnOptions = useProtocolColumns(inspectionId, opened);
+  const columnOptions = useProtocolColumns(inspectionId, opened, typeIds);
+  const columnLabels = new Map((columnOptions.data ?? []).map((c) => [c.key, c.label]));
   const [withList, setWithList] = useState(false);
   /** Defects with cards and photos: all, red and yellow, or only red. */
   const [defects, setDefects] = useState<'all' | 'red-amber' | 'red'>('all');
@@ -355,15 +356,21 @@ export function ProtocolPreview({
             label="Sloupce přílohy 1"
             description="Pořadí změníte šipkami níže. Výběr se zapamatuje."
             data={(columnOptions.data ?? []).map((c) => ({ value: c.key, label: c.label }))}
-            value={columns}
-            onChange={changeColumns}
+            // Only what this protocol can print (fields of its types); columns remembered from
+            // other protocols stay remembered but are not shown.
+            value={columns.filter((key) => columnLabels.has(key))}
+            onChange={(next) =>
+              changeColumns([...next, ...columns.filter((key) => !columnLabels.has(key))])
+            }
             searchable
             clearable
           />
           <ColumnOrder
             columns={columns}
-            labels={new Map((columnOptions.data ?? []).map((c) => [c.key, c.label]))}
-            onChange={changeColumns}
+            labels={columnLabels}
+            onChange={(next) =>
+              changeColumns([...next, ...columns.filter((key) => !columnLabels.has(key))])
+            }
           />
         </Stack>
         {html.isPending && <Loader m="xl" />}

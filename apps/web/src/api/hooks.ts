@@ -918,10 +918,20 @@ export const useProtocolHtml = (
   });
 
 /** Columns that can be chosen for the protocol appendix. */
-export const useProtocolColumns = (inspectionId: string, enabled: boolean) =>
+export const useProtocolColumns = (
+  inspectionId: string,
+  enabled: boolean,
+  /** Types of the protocol: only their fields are offered (empty = all of the inspection). */
+  equipmentTypeIds: readonly string[] = [],
+) =>
   useQuery<{ key: string; label: string }[], ApiRequestError>({
-    queryKey: ['protocol-columns', inspectionId],
-    queryFn: () => api.get(`/inspections/${inspectionId}/protocol-columns`),
+    queryKey: ['protocol-columns', inspectionId, equipmentTypeIds.join(',')],
+    queryFn: () =>
+      api.get(
+        `/inspections/${inspectionId}/protocol-columns${queryString({
+          equipmentTypeIds: equipmentTypeIds.join(',') || undefined,
+        })}`,
+      ),
     enabled,
   });
 
