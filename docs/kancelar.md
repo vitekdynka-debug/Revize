@@ -144,10 +144,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      v auditu.
 9. **Nastavení** (administrátor):
    - Název firmy, IČO, adresa a kontakty.
-   - **Datum vydání** a **Verze** v hlavičce stránek: datum vydání je datum vydání formuláře
-     protokolu a nastavuje se u každého typu vybavení (Typy vybavení → _Datum vydání formuláře_);
-     protokol více typů vezme nejnovější z nich. Zde vyplněné datum platí pro typy bez vlastního,
-     prázdné = datum uzavření kontroly. Verze: prázdné = 1, po každém znovuotevření o 1 víc.
+   - **Datum vydání formuláře** a **Verze** v hlavičce stránek: datum vydání formuláře je den,
+     kdy byl text protokolu interně schválen, a nastavuje se u každého typu vybavení (Typy
+     vybavení → _Datum vydání formuláře_); protokol více typů vezme nejnovější z nich. Zde
+     vyplněné datum platí pro typy bez vlastního, prázdné = v hlavičce nic. Verze: prázdné = 1,
+     po každém znovuotevření o 1 víc.
    - **Oprávnění technika** má každý uživatel ve svém profilu (**Můj účet → Profil technika**,
      administrátor i v Uživatelé): **obecné** a **pro každý typ vybavení** zvlášť (vázací
      prostředky, regály…). Pod podpisem se tiskne oprávnění vedoucího technika pro typy
@@ -202,8 +203,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
         U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají
         v rozlišení 300 dpi přesně podle tištěné velikosti, mírně oříznuté (až na čtverec), aby
         se dvě vešly vedle sebe.
-      - Karty závad tečou v novinových sloupcích (1–3), takže malé skupiny nenechávají prázdná
-        místa.
+      - Karty závad jsou v řadách po 1–3. Karty jedné řady jsou zarovnané a stejně vysoké a řada
+        se nikdy nerozdělí na dvě stránky (popis závady zůstane u svých fotek).
       - Volba **Všechny závady / Červené a žluté / Jen červené** určuje, které závady dostanou
         v protokolu kartu s fotkami. Tabulka vybavení dál uvádí výsledky všech artiklů.
       - Varování a podpisy se vejdou-li, pokračují na první straně a závady na straně s texty.

@@ -298,7 +298,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
           />
           <DateField
             label="Datum vydání formuláře"
-            description="V hlavičce protokolu tohoto typu (pevné datum vydání formuláře protokolu)"
+            description="Kdy byl text protokolu tohoto typu interně schválen. Tiskne se v hlavičce protokolu."
             disabled={!canWrite}
             value={formIssueDate}
             onChange={setFormIssueDate}

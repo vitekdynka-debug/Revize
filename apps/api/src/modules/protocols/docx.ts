@@ -208,7 +208,7 @@ function pageHeader(data: ProtocolData) {
     }),
     new TableRow({
       children: [
-        cell(label('Datum vydání:', 'Date of publication:')),
+        cell(label('Datum vydání formuláře:', 'Form issue date:')),
         cell(centered(c.issueDate)),
         cell(label('Verze:', 'Version:')),
         cell(centered(c.version)),

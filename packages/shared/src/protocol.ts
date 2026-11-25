@@ -123,8 +123,9 @@ export interface ProtocolCompany {
   /** The lead technician's authorization (their profile), printed with their name. */
   certification: string;
   /**
-   * "Datum vydání", "Verze" in the page header: from Nastavení, otherwise the closing date of
-   * the inspection and 1 + the number of reopenings.
+   * "Datum vydání formuláře" (when the text of the protocol form was approved internally: from
+   * the equipment type, else Nastavení, else empty) and "Verze" (Nastavení, else 1 + the number
+   * of reopenings) in the page header.
    */
   issueDate: string;
   version: string;
@@ -533,7 +534,7 @@ function pageHeader(c: ProtocolCompany, page: { page: string; pages: string } | 
 <td class="logo" rowspan="3">${c.logo ? `<img src="${c.logo}" alt="">` : ''}</td>
 <td class="center" colspan="6">${escape(companyLine(c))}</td></tr>
 <tr><td class="center label" colspan="6">Protokol o kontrole technického vybavení</td></tr>
-<tr><td class="label">Datum vydání:<br>Date of publication:</td><td class="center">${escape(c.issueDate)}</td>
+<tr><td class="label">Datum vydání formuláře:<br>Form issue date:</td><td class="center">${escape(c.issueDate)}</td>
 <td class="label">Verze:<br>Version:</td><td class="center">${escape(c.version)}</td>
 <td class="label">Počet stránek:<br>Number of pages:</td><td class="center">${page ? `Stránka<br>${page.page} z ${page.pages}` : ''}</td></tr></table>`;
 }
@@ -610,11 +611,13 @@ td, th { border: 0.75pt solid #000; padding: 0.8mm 1.2mm; vertical-align: middle
 .sev span { font-size: 8pt; font-weight: 400; color: #000; margin-left: 2mm; }
 .place { font-size: 8.5pt; margin: 1.5mm 0 1mm; text-decoration: underline; text-underline-offset: 2px; }
 .sev { break-after: avoid; page-break-after: avoid; }
-.flow { column-gap: 2mm; }
-.flow.c1 { column-count: 1; } .flow.c2 { column-count: 2; } .flow.c3 { column-count: 3; }
-.flow .keep, .flow > .defect { break-inside: avoid; page-break-inside: avoid; }
+/* Rows of cards, each row a block that is never split (Chromium splits cards inside newspaper
+   columns and grid rows when printing); cards of a row line up (top, equal height). */
+.flow { margin-bottom: 2mm; }
+.flow .row { display: grid; gap: 2mm; align-items: stretch; margin-bottom: 2mm; break-inside: avoid; page-break-inside: avoid; }
+.flow.c1 .row { grid-template-columns: 1fr; } .flow.c2 .row { grid-template-columns: repeat(2, 1fr); } .flow.c3 .row { grid-template-columns: repeat(3, 1fr); }
 .place { break-after: avoid; page-break-after: avoid; }
-.defect { border: 0.5pt solid #000; padding: 1mm 1.2mm; font-size: 8pt; line-height: 1.2; margin-bottom: 2mm; break-inside: avoid; page-break-inside: avoid; }
+.defect { border: 0.5pt solid #000; padding: 1mm 1.2mm; font-size: 8pt; line-height: 1.2; break-inside: avoid; page-break-inside: avoid; }
 .defect .t { font-weight: 700; }
 .photos { display: flex; flex-wrap: wrap; gap: 1mm; margin-top: 1mm; }
 .photos img { object-fit: cover; border: 0.5pt solid #000; }
@@ -696,15 +699,24 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     `<div class="defect"><div class="t">${escape(defectCardTitle(d))}</div>${
       d.defectDescription ? `<div>${escape(d.defectDescription)}</div>` : ''
     }${d.photos.length ? `<div class="photos">${photoTags(d.photos, columns)}</div>` : ''}</div>`;
-  // Cards flow in newspaper columns (no half-empty rows); a workplace heading stays with its
-  // first card, a severity heading spans the columns.
+  // Cards in rows of `columns`; a workplace heading stays with the first row after it.
   const defectGroups = protocolDefectGroups(data)
     .map((group) => {
       const places = group.places
         .map((place) => {
-          const [first, ...rest] = place.defects;
           const heading = place.place ? `<h3 class="place">${escape(place.place)}</h3>` : '';
-          return `<div class="keep">${heading}${defectCard(first!)}</div>${rest.map(defectCard).join('')}`;
+          const rows: string[] = [];
+          for (let i = 0; i < place.defects.length; i += columns) {
+            rows.push(
+              `<div class="row">${place.defects
+                .slice(i, i + columns)
+                .map(defectCard)
+                .join('')}</div>`,
+            );
+          }
+          const [first, ...rest] = rows;
+          // The workplace heading stays with its first row.
+          return `<div class="keep">${heading}${first}</div>${rest.join('')}`;
         })
         .join('');
       return `<h2 class="sev">${SEVERITY_GROUP_TITLE[group.severity]} (${group.count})<span>${escape(

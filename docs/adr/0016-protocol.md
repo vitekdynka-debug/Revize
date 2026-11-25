@@ -146,3 +146,12 @@ kopíruje formulář firmy:
 | 08       | 120     | 60     | 60    | 10    | 35 mm | 3       |
 | 09       | 50      | 20     | 0     | 4     | –     | –       |
 | 10       | 150     | 80     | 80    | 12    | 35 mm | 3       |
+
+## Doplnění 2026-11-25: karty závad v řadách místo novinových sloupců
+
+Chromium při tisku do PDF uvnitř CSS multicol (i s `column-count: 1`) a uvnitř řádků CSS gridu
+nedodržuje `break-inside: avoid`: karta závady se rozdělila na dvě stránky (popis na jedné,
+fotky na druhé). Karty vedle sebe navíc nebyly zarovnané. Proto jsou karty v **řadách po 1–3**:
+každá řada je samostatný blok (`.row`, grid jen uvnitř řady), který se nedělí, karty v řadě mají
+stejnou výšku a nadpis haly drží s první řadou. Odhad počtu stránek (`defectPages`) počítá
+s řadami (výška řady = nejvyšší karta). Word dál používá oddíl se sloupci.

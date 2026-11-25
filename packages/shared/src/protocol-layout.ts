@@ -114,9 +114,9 @@ function cardHeight(
 }
 
 /**
- * Pages the defect section takes. Cards flow in newspaper columns (down one column, then the
- * next, then the next page) – no half-empty rows when a workplace has few defects. A severity
- * heading spans all columns; a workplace heading stays with its first card; cards never split.
+ * Pages the defect section takes. Cards sit in rows of `columns` (a grid: cards of a row are
+ * aligned and equally tall); a row is never split and moves whole to the next page. A severity
+ * heading and a workplace heading span the row and stay with the first row after them.
  */
 export function defectPages(
   groups: DefectGroupsInput,
@@ -128,69 +128,40 @@ export function defectPages(
   startUsed = 0,
 ): number {
   const width = columnWidthOf(columns);
-  // A few mm of reserve: a page break one card too early costs a whole column.
+  // A few mm of reserve: a row moved to the next page costs its whole height.
   const usable = PAGE.height - 6;
   let pages = 1;
   let top = startUsed;
-  /** How many items fill `columns` columns of height `height` from the start (greedy). */
-  const fitting = (items: number[], height: number) => {
-    let column = 0;
-    let filled = 0;
-    let count = 0;
-    for (const h of items) {
-      if (filled + h > height && filled > 0) {
-        column += 1;
-        filled = 0;
-      }
-      if (column >= columns || h > height) break;
-      filled += h;
-      count += 1;
-    }
-    return count;
-  };
-  /** Items in newspaper columns; the last page's columns are balanced (as the browser does). */
-  const flow = (all: number[]) => {
-    let items = all.map((h) => Math.min(h, usable));
-    while (items.length) {
-      const available = usable - top;
-      if (fitting(items, available) === items.length) {
-        // Balanced: the lowest column height that still takes everything.
-        let low = Math.max(...items);
-        let high = available;
-        while (high - low > 1) {
-          const mid = (low + high) / 2;
-          if (fitting(items, mid) === items.length) high = mid;
-          else low = mid;
-        }
-        top += high;
-        return;
-      }
-      const placed = fitting(items, available);
-      items = items.slice(placed);
-      pages += 1;
-      top = 0;
-    }
-  };
-  /** A full-width block (severity heading, overview photos) kept with what follows. */
+  /** A full-width block kept with what follows (`keepWith`). */
   const span = (height: number, keepWith: number) => {
     if (top + height + keepWith > usable && top > 0) {
       pages += 1;
       top = 0;
     }
-    top += height;
+    top += Math.min(height, usable);
   };
   for (const severity of groups) {
-    const cards = severity.flat();
-    if (!cards.length) continue;
-    const heights = severity.flatMap((place) =>
-      place.map(
-        (card, i) =>
-          // The workplace heading goes with its first card.
-          (i === 0 ? PLACE_HEADING : 0) + cardHeight(card, width, photoHeight, columns) + CARD_GAP,
-      ),
-    );
-    span(SEVERITY_HEADING, heights[0]!);
-    flow(heights);
+    const places = severity.filter((place) => place.length);
+    if (!places.length) continue;
+    const rowsOf = (place: (typeof places)[number]) => {
+      const rows: number[] = [];
+      for (let i = 0; i < place.length; i += columns) {
+        rows.push(
+          Math.max(
+            ...place
+              .slice(i, i + columns)
+              .map((card) => cardHeight(card, width, photoHeight, columns)),
+          ) + CARD_GAP,
+        );
+      }
+      return rows;
+    };
+    places.forEach((place, index) => {
+      const rows = rowsOf(place);
+      if (index === 0) span(SEVERITY_HEADING, PLACE_HEADING + rows[0]!);
+      span(PLACE_HEADING, rows[0]!);
+      for (const row of rows) span(row, 0);
+    });
   }
   if (overviewPhotos) {
     const perRow = Math.max(1, Math.floor((PAGE.width + 1) / (photoHeight * PHOTO_ASPECT + 1)));

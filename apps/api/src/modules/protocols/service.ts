@@ -250,11 +250,10 @@ export function createProtocolsService(
         return { typeName: type.name, text, items: rows };
       });
 
-    // Issue date and version of this protocol (page header) unless fixed in Nastavení: closing
-    // date (today for a draft) and 1 + reopenings; the lead technician's own authorization.
+    // Version of this protocol (page header) unless fixed in Nastavení: 1 + reopenings; the lead
+    // technician's own authorization.
     const [issued] = await db
       .select({
-        closedAt: inspectionTable.closedAt,
         reopenedCount: inspectionTable.reopenedCount,
         certification: appUser.certification,
         certifications: appUser.certifications,
@@ -262,15 +261,16 @@ export function createProtocolsService(
       .from(inspectionTable)
       .innerJoin(appUser, eq(appUser.id, inspectionTable.leadInspectorId))
       .where(eq(inspectionTable.id, inspection.id));
-    // "Datum vydání" is that of the protocol form of the type (fixed, in Typy vybavení); with
-    // several types the newest of their forms; otherwise Nastavení, else the closing date.
+    // "Datum vydání formuláře": when the text of the type's protocol form was approved internally
+    // (Typy vybavení); with several types the newest of their forms; otherwise Nastavení, else
+    // empty (not a date of the inspection).
     const formDates = types
       .filter((t) => !equipmentTypeIds.length || equipmentTypeIds.includes(t.id))
       .flatMap((t) => (t.formIssueDate ? [t.formIssueDate] : []))
       .sort();
     const issueDate = formDates.length
       ? czechDate(formDates.at(-1)!)
-      : settings.protocolIssueDate || czechDate((issued?.closedAt ?? new Date()).toISOString());
+      : settings.protocolIssueDate || '';
     const version = settings.protocolVersion || String((issued?.reopenedCount ?? 0) + 1);
 
     const data: ProtocolData = {

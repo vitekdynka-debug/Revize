@@ -1,4 +1,4 @@
-import { formatDate, newId } from '@revize/shared';
+import { newId } from '@revize/shared';
 import { eq } from 'drizzle-orm';
 import { strFromU8, unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
@@ -327,9 +327,10 @@ describe('organization settings and protocol', () => {
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
     // The preview has one header: the page count is the layout's estimate.
     expect(html).toMatch(/Stránka<br>1 z [1-9]\d*</);
-    // Header filled without settings: today as the issue date, version 1.
-    const today = new Date().toISOString();
-    expect(html).toContain(`<td class="center">${formatDate(today)}</td>`);
+    // Header without settings: no form issue date (not a date of the inspection), version 1.
+    expect(html).toContain(
+      'Datum vydání formuláře:<br>Form issue date:</td><td class="center"></td>',
+    );
     expect(html).toContain('<td class="center">1</td>');
     expect(html).toContain('Ukázkový sklad s.r.o.');
     expect(html).toContain('Prasklá příčka');
@@ -447,7 +448,7 @@ describe('organization settings and protocol', () => {
     expect(xml).toContain('Prasklá příčka');
     expect(xml).toContain('Žebříky a schůdky');
     expect(Object.keys(files).some((f) => f.startsWith('word/media/'))).toBe(true);
-    expect(strFromU8(files['word/header1.xml']!)).toContain('Datum vydání');
+    expect(strFromU8(files['word/header1.xml']!)).toContain('Datum vydání formuláře');
 
     await api('POST', `/api/inspections/${id}/close`, {});
     const final = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;

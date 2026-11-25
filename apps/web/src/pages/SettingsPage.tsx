@@ -40,9 +40,9 @@ const FIELDS: { key: TextSetting; label: string; description?: string }[] = [
   { key: 'web', label: 'Web' },
   {
     key: 'protocolIssueDate',
-    label: 'Datum vydání (pevné)',
+    label: 'Datum vydání formuláře (výchozí)',
     description:
-      'Platí, když typ vybavení nemá vlastní datum vydání formuláře (Typy vybavení). Prázdné = datum uzavření kontroly.',
+      'Platí, když typ vybavení nemá vlastní datum vydání formuláře (Typy vybavení). Prázdné = v hlavičce nic.',
   },
   {
     key: 'protocolVersion',
