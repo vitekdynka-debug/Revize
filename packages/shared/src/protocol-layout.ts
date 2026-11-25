@@ -209,12 +209,74 @@ export function choosePhotoLayout(
   return pick ?? { photoHeight: PREFERRED_PHOTO_HEIGHT, columns: 1, pages: 0, total: 0 };
 }
 
-/** Pages of Příloha 1 on A4 landscape (8 pt rows; the last column holds the long text). */
-export function appendixPages(rows: readonly { cells: readonly string[] }[]): number {
+/** Width of the Příloha 1 table: A4 landscape minus margins (mm). */
+export const APPENDIX_WIDTH = 297 - 28;
+/** Average width of a character at 8 pt (mm) and the padding of a cell. */
+const APPENDIX_CHAR = 1.6;
+/** Headings are bold: a little wider. */
+const APPENDIX_HEADER_CHAR = 1.9;
+const APPENDIX_PADDING = 2.5;
+/** Columns up to this width (mm) keep their natural width; longer texts share the rest. */
+const APPENDIX_SHORT = 40;
+
+/**
+ * Widths of the Příloha 1 columns (mm, summing to `APPENDIX_WIDTH`) from their content: short
+ * columns (dates, ANO/NE, numbers) are as wide as their longest value or the longest word of
+ * their heading; the long texts (Poznámka…) take the rest, in proportion to their length.
+ */
+export function appendixColumnWidths(
+  columns: readonly string[],
+  rows: readonly { cells: readonly string[] }[],
+): number[] {
+  if (!columns.length) return [];
+  const words = (text: string) => Math.max(0, ...text.split(/\s+/).map((w) => w.length));
+  // At least the longest word of the heading (a long text wraps, a heading word does not).
+  const minimum = columns.map(
+    (h) => Math.max(words(h) * APPENDIX_HEADER_CHAR, 3 * APPENDIX_CHAR) + APPENDIX_PADDING,
+  );
+  const natural = columns.map((_, i) =>
+    Math.max(
+      minimum[i]!,
+      Math.max(0, ...rows.map((r) => (r.cells[i] ?? '').length)) * APPENDIX_CHAR + APPENDIX_PADDING,
+    ),
+  );
+  const total = natural.reduce((a, b) => a + b, 0);
+  const long = natural.map((w) => w > APPENDIX_SHORT);
+  if (total <= APPENDIX_WIDTH) {
+    // Spare room goes to the long texts (or to all, when every column is short).
+    const growing = long.some(Boolean) ? long : natural.map(() => true);
+    const grown = natural.reduce((sum, w, i) => sum + (growing[i] ? w : 0), 0);
+    return natural.map((w, i) => (growing[i] ? w + ((APPENDIX_WIDTH - total) * w) / grown : w));
+  }
+  const fixed = natural.reduce((sum, w, i) => sum + (long[i] ? 0 : w), 0);
+  const longTotal = natural.reduce((sum, w, i) => sum + (long[i] ? w : 0), 0);
+  const rest = APPENDIX_WIDTH - fixed;
+  const shared = natural.map((w, i) =>
+    long[i] ? Math.max(minimum[i]!, (rest * w) / longTotal) : w,
+  );
+  // Too many columns even for that: everything in proportion.
+  const sum = shared.reduce((a, b) => a + b, 0);
+  return shared.map((w) => (w * APPENDIX_WIDTH) / sum);
+}
+
+/** Pages of Příloha 1 on A4 landscape (8 pt rows, texts wrapped in their column widths). */
+export function appendixPages(
+  rows: readonly { cells: readonly string[] }[],
+  columns: readonly string[] = [],
+): number {
   const usable = 210 - 49;
-  const perLine = Math.floor(((297 - 28) * 0.3) / 1.45);
+  const widths = columns.length
+    ? appendixColumnWidths(columns, rows)
+    : // Unknown columns: the long text in a 30 % column.
+      [APPENDIX_WIDTH * 0.3];
+  const perLine = widths.map((w) =>
+    Math.max(1, Math.floor((w - APPENDIX_PADDING) / APPENDIX_CHAR)),
+  );
   const body = rows.reduce((sum, row) => {
-    const longest = Math.max(1, ...row.cells.map((c) => Math.ceil(c.length / perLine)));
+    const longest = Math.max(
+      1,
+      ...row.cells.map((c, i) => Math.ceil(c.length / (perLine[i] ?? perLine[0]!))),
+    );
     return sum + longest * 3.2 + 1.2;
   }, 0);
   return Math.max(1, Math.ceil((12 + 6 + body) / usable));
@@ -258,7 +320,7 @@ export function planProtocolLayout(
   const startPage = Math.floor(position / PAGE.height) + 1;
   const afterWarning = position % PAGE.height;
   const useAppendix = Boolean(data.appendix?.columns.length && (forceAppendix || !inlineTable));
-  const appendix = useAppendix ? appendixPages(data.appendix!.rows) : 0;
+  const appendix = useAppendix ? appendixPages(data.appendix!.rows, data.appendix!.columns) : 0;
   const groups = defects.map((severity) =>
     severity.map((place) =>
       place.map(({ title, item }) => ({

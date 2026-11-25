@@ -6,6 +6,8 @@ import {
   companyLine,
   formatDate,
   parseProtocolText,
+  APPENDIX_WIDTH,
+  appendixColumnWidths,
   defectCardTitle,
   protocolItemTitle,
   inspectionDaysText,
@@ -517,10 +519,10 @@ export async function renderProtocolDocx(
   const appendix: (Paragraph | Table)[] = [];
   if (data.appendix?.columns.length && (layout.useAppendix || part === 'appendix')) {
     const { columns, rows } = data.appendix;
-    const last = columns.length > 1 ? Math.round(LANDSCAPE_WIDTH * 0.3) : LANDSCAPE_WIDTH;
-    const other =
-      columns.length > 1 ? Math.floor((LANDSCAPE_WIDTH - last) / (columns.length - 1)) : 0;
-    const widths = columns.map((_, i) => (i === columns.length - 1 ? last : other));
+    // The same widths as in the PDF, scaled to the Word page.
+    const widths = appendixColumnWidths(columns, rows).map((w) =>
+      Math.floor((w / APPENDIX_WIDTH) * LANDSCAPE_WIDTH),
+    );
     appendix.push(
       heading(APPENDIX_TITLE, { size: 13 }),
       table(widths, [

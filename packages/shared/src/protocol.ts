@@ -8,6 +8,8 @@
 
 import { formatDate, localDay } from './dates.js';
 import {
+  APPENDIX_WIDTH,
+  appendixColumnWidths,
   appendixPages,
   linesOf,
   PAGE,
@@ -601,8 +603,8 @@ td, th { border: 0.75pt solid #000; padding: 0.8mm 1.2mm; vertical-align: middle
 .photo-pages { margin-top: 3mm; }
 .appendix { page: appendix; page-break-before: always; }
 .appendix h2 { font-size: 13pt; }
-.list { font-size: 8pt; table-layout: auto; }
-.list td:last-child { min-width: 70mm; }
+.list { font-size: 8pt; table-layout: fixed; }
+.list td { overflow-wrap: anywhere; }
 .list tr.unsafe td { font-weight: 700; color: #e00000; }
 .list th, .list td { padding: 0.4mm 1mm; line-height: 1.15; }
 .list tr { page-break-inside: avoid; }
@@ -651,7 +653,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     page: '1',
     pages: String(
       options.part === 'appendix' && data.appendix
-        ? appendixPages(data.appendix.rows)
+        ? appendixPages(data.appendix.rows, data.appendix.columns)
         : Math.max(1, layout.pages),
     ),
   };
@@ -725,7 +727,12 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     })
     .join('');
   const appendixHtml = data.appendix
-    ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
+    ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><colgroup>${appendixColumnWidths(
+        data.appendix.columns,
+        data.appendix.rows,
+      )
+        .map((w) => `<col style="width:${((w / APPENDIX_WIDTH) * 100).toFixed(2)}%">`)
+        .join('')}</colgroup><thead><tr>${data.appendix.columns
         .map((h) => `<th class="grey">${escape(h)}</th>`)
         .join('')}</tr></thead><tbody>${data.appendix.rows
         .map(
