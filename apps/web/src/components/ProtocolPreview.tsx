@@ -32,6 +32,23 @@ function loadColumns(): string[] {
 }
 
 const SHORTEST_KEY = 'revize.protocol.shortest';
+const OVERVIEW_KEY = 'revize.protocol.hideOverview';
+
+function loadFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveFlag(key: string, value: boolean) {
+  try {
+    localStorage.setItem(key, value ? '1' : '0');
+  } catch {
+    // Not remembered, nothing else depends on it.
+  }
+}
 
 function loadShortest(): boolean {
   try {
@@ -86,6 +103,8 @@ export function ProtocolPreview({
   const [defects, setDefects] = useState<'all' | 'red-amber' | 'red'>('all');
   const [columns, setColumns] = useState<string[]>(loadColumns);
   const [shortest, setShortest] = useState(loadShortest);
+  // The inspection's own photos (Fotodokumentace) are sometimes only for the office.
+  const [hideOverview, setHideOverview] = useState(() => loadFlag(OVERVIEW_KEY));
   // The choice of red / yellow defects only applies to types with risk levels (racks).
   const hasRiskLevels = types.some(
     (t) => (!typeIds.length || typeIds.includes(t.id)) && t.riskLevels,
@@ -99,6 +118,7 @@ export function ProtocolPreview({
     withList,
     shownDefects,
     shortest,
+    hideOverview,
   );
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -112,6 +132,7 @@ export function ProtocolPreview({
         appendix: withList ? 'always' : undefined,
         defects: shownDefects === 'all' ? undefined : shownDefects,
         size: shortest ? 'shortest' : undefined,
+        overview: hideOverview ? 'hide' : undefined,
         ...query,
       })}`,
       name,
@@ -228,6 +249,15 @@ export function ProtocolPreview({
             onChange={(e) => {
               setShortest(e.currentTarget.checked);
               saveShortest(e.currentTarget.checked);
+            }}
+          />
+          <Switch
+            label="Fotodokumentace kontroly"
+            description="Celkové fotky kontroly (hala, přístup) na konci protokolu. Vypnuté: zůstanou jen u vás."
+            checked={!hideOverview}
+            onChange={(e) => {
+              setHideOverview(!e.currentTarget.checked);
+              saveFlag(OVERVIEW_KEY, !e.currentTarget.checked);
             }}
           />
           {hasRiskLevels && (

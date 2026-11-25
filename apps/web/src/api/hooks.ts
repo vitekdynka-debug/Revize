@@ -885,6 +885,8 @@ export const useProtocolHtml = (
   defects: 'all' | 'red-amber' | 'red' = 'all',
   /** The fewest pages (smallest photos, more columns). */
   shortest = false,
+  /** Without the inspection's own photos (Fotodokumentace). */
+  hideOverview = false,
 ) =>
   useQuery<string, ApiRequestError>({
     queryKey: [
@@ -895,6 +897,7 @@ export const useProtocolHtml = (
       forceAppendix,
       defects,
       shortest,
+      hideOverview,
     ],
     queryFn: async () =>
       (
@@ -905,6 +908,7 @@ export const useProtocolHtml = (
             appendix: forceAppendix ? 'always' : undefined,
             defects: defects === 'all' ? undefined : defects,
             size: shortest ? 'shortest' : undefined,
+            overview: hideOverview ? 'hide' : undefined,
           })}`,
         )
       ).text(),

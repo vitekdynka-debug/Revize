@@ -66,12 +66,19 @@ const borders = { top: border, bottom: border, left: border, right: border };
 
 function run(
   text: string,
-  options: { bold?: boolean; size?: number; color?: string; strike?: boolean } = {},
+  options: {
+    bold?: boolean;
+    size?: number;
+    color?: string;
+    strike?: boolean;
+    underline?: boolean;
+  } = {},
 ) {
   return new TextRun({
     text,
     font: FONT,
     bold: options.bold,
+    ...(options.underline ? { underline: {} } : {}),
     color: options.color,
     strike: options.strike,
     size: (options.size ?? 9) * 2,
@@ -283,7 +290,10 @@ function itemRow(i: ProtocolItem) {
   const description: ParagraphChild[] = [
     ...(i.designation && i.itemNumber ? [run(`${i.designation} `, { bold: true })] : []),
     run(i.details),
-    ...(i.location ? [new TextRun({ text: i.location, font: FONT, size: 16, break: 1 })] : []),
+    // Underlined: the location must not get lost among the details.
+    ...(i.location
+      ? [new TextRun({ text: i.location, font: FONT, size: 16, break: 1, underline: {} })]
+      : []),
   ];
   return new TableRow({
     cantSplit: true,
@@ -475,7 +485,7 @@ export async function renderProtocolDocx(
           new Paragraph({
             keepNext: true,
             spacing: { before: mm(1), after: mm(0.5) },
-            children: [run(place.place, { bold: true, size: 8.5 })],
+            children: [run(place.place, { bold: true, size: 8.5, underline: true })],
           }),
         );
       }

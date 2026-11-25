@@ -1,0 +1,1 @@
+ALTER TABLE "equipment_type" ADD COLUMN "form_issue_date" date;

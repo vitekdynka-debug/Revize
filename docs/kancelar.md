@@ -142,9 +142,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      v auditu.
 9. **Nastavení** (administrátor):
    - Název firmy, IČO, adresa a kontakty.
-   - **Datum vydání** a **Verze** v hlavičce stránek: prázdné = datum uzavření kontroly
-     (u předběžného protokolu dnešní) a verze 1, po každém znovuotevření o 1 víc. Vyplněné
-     hodnoty platí pro všechny protokoly.
+   - **Datum vydání** a **Verze** v hlavičce stránek: datum vydání je datum vydání formuláře
+     protokolu a nastavuje se u každého typu vybavení (Typy vybavení → _Datum vydání formuláře_);
+     protokol více typů vezme nejnovější z nich. Zde vyplněné datum platí pro typy bez vlastního,
+     prázdné = datum uzavření kontroly. Verze: prázdné = 1, po každém znovuotevření o 1 víc.
    - **Oprávnění technika** má každý uživatel ve svém profilu (**Můj účet → Profil technika**,
      administrátor i v Uživatelé): **obecné** a **pro každý typ vybavení** zvlášť (vázací
      prostředky, regály…). Pod podpisem se tiskne oprávnění vedoucího technika pro typy
@@ -192,6 +193,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
         označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
       - Přepínač **Co nejkratší protokol** (zapamatuje se) vždy zvolí nejmenší fotky (3,5 cm)
         a víc sloupců závad, i když by se protokol vešel do 8 stran.
+      - Přepínač **Fotodokumentace kontroly** (zapamatuje se): vypnutý vynechá celkové fotky
+        kontroly (hala, přístup), třeba když jsou jen pro vás. Fotky závad zůstávají.
       - Volba _Všechny / Červené a žluté / Jen červené_ je vidět jen u kontrol s regály.
       - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
         U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají

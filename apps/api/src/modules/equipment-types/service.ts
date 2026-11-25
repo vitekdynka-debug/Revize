@@ -46,6 +46,7 @@ function toDto(row: Row, count: number): EquipmentType {
     protocolTemplate: row.protocolTemplate,
     riskLevels: row.riskLevels,
     checklist: row.checklist,
+    formIssueDate: row.formIssueDate,
     schemaVersion: row.schemaVersion,
     archived: row.archivedAt !== null,
     itemCount: count,
@@ -316,6 +317,7 @@ export function createEquipmentTypesService(db: Db) {
           protocolTemplate: t.protocolTemplate,
           riskLevels: t.riskLevels,
           checklist: t.checklist,
+          formIssueDate: t.formIssueDate,
         })),
       };
     },

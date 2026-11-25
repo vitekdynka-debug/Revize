@@ -166,6 +166,8 @@ export const equipmentTypeSchema = z.object({
   riskLevels: z.boolean(),
   /** Check points answered ANO / NE on every item in the field (ADR-0021). */
   checklist: checklistSchema,
+  /** "Datum vydání" of the type's protocol form (page header); null = from Nastavení. */
+  formIssueDate: z.string().nullable(),
   schemaVersion: z.number().int(),
   archived: z.boolean(),
   itemCount: z.number().int(),
@@ -180,6 +182,7 @@ const equipmentTypeFields = {
   protocolTemplate: z.string().max(20_000),
   riskLevels: z.boolean(),
   checklist: checklistSchema,
+  formIssueDate: isoDate.nullable(),
 };
 export const createEquipmentTypeSchema = z.union([
   z.object({
@@ -187,6 +190,7 @@ export const createEquipmentTypeSchema = z.union([
     ...equipmentTypeFields,
     riskLevels: equipmentTypeFields.riskLevels.default(false),
     checklist: equipmentTypeFields.checklist.default([]),
+    formIssueDate: equipmentTypeFields.formIssueDate.default(null),
   }),
   /** Copy of a library type; the name may be changed. */
   z.object({
@@ -199,6 +203,7 @@ export const createEquipmentTypeSchema = z.union([
 export const equipmentTypeSettingsSchema = z.object({
   ...equipmentTypeFields,
   checklist: equipmentTypeFields.checklist.default([]),
+  formIssueDate: equipmentTypeFields.formIssueDate.default(null),
 });
 /** `GET /equipment-types/export`: the types of the organization to copy into another instance. */
 export const equipmentTypesExportSchema = z.object({

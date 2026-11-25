@@ -20,6 +20,8 @@ const querystring = z.object({
   defects: z.enum(['red', 'red-amber', 'all']).default('all'),
   /** `shortest`: the fewest pages (smallest photos, more columns) even within 8 pages. */
   size: z.enum(['auto', 'shortest']).default('auto'),
+  /** `hide`: without the inspection's own photos (Fotodokumentace, e.g. only for the office). */
+  overview: z.enum(['show', 'hide']).default('show'),
 });
 const SEVERITIES_OF = {
   red: ['red'],
@@ -34,8 +36,10 @@ const optionsOf = (q: {
   part: 'all' | 'appendix';
   defects: keyof typeof SEVERITIES_OF;
   size: 'auto' | 'shortest';
+  overview: 'show' | 'hide';
 }) => ({
   shortest: q.size === 'shortest',
+  hideOverview: q.overview === 'hide',
   severities: [...SEVERITIES_OF[q.defects]],
   equipmentTypeIds: [
     ...(q.equipmentTypeId ? [q.equipmentTypeId] : []),

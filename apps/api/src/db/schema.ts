@@ -180,6 +180,8 @@ export const equipmentType = pgTable(
      * result is just fit / unfit (a defect = unfit, taken out of service).
      */
     riskLevels: boolean('risk_levels').notNull().default(false),
+    /** "Datum vydání" of the type's protocol form, printed in the page header (fixed). */
+    formIssueDate: date('form_issue_date'),
     /** Check points answered ANO / NE in the field (ADR-0021). */
     checklist: jsonb('checklist').$type<ChecklistItem[]>().notNull().default([]),
     schemaVersion: integer('schema_version').notNull().default(1),

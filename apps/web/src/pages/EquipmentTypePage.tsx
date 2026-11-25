@@ -47,6 +47,7 @@ import {
   useUpdateEquipmentType,
 } from '../api/hooks.js';
 import { ChecklistEditor } from '../components/ChecklistEditor.js';
+import { DateField } from '../components/DateField.js';
 import { DynamicFields } from '../components/DynamicFields.js';
 import { formatDate, slugKey } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
@@ -81,6 +82,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
   const [interval, setInterval] = useState<number>(type.defaultIntervalMonths);
   const [template, setTemplate] = useState(type.protocolTemplate);
   const [riskLevels, setRiskLevels] = useState(type.riskLevels);
+  const [formIssueDate, setFormIssueDate] = useState(type.formIssueDate ?? '');
   const [checklist, setChecklist] = useState<ChecklistItem[]>(type.checklist);
   const savedCheckKeys = useMemo(() => new Set(type.checklist.map((c) => c.key)), [type.checklist]);
   const [checklistErrors, setChecklistErrors] = useState<Record<string, string>>({});
@@ -172,6 +174,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
         protocolTemplate: template,
         riskLevels,
         checklist: checklistParsed.data,
+        formIssueDate: formIssueDate || null,
         fieldDefinitions: parsed.data,
       },
       {
@@ -292,6 +295,13 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
             disabled={!canWrite}
             value={interval}
             onChange={(v) => setInterval(Number(v) || 12)}
+          />
+          <DateField
+            label="Datum vydání formuláře"
+            description="V hlavičce protokolu tohoto typu (pevné datum vydání formuláře protokolu)"
+            disabled={!canWrite}
+            value={formIssueDate}
+            onChange={setFormIssueDate}
           />
         </SimpleGrid>
         <Switch

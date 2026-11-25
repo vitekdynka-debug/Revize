@@ -67,6 +67,33 @@ it('fills the showcase: customer, items with photos, a closed and an open inspec
   });
   expect(pdf.statusCode, pdf.body.slice(0, 200)).toBe(200);
   expect(pdf.rawPayload.subarray(0, 4).toString()).toBe('%PDF');
+  // The inspection's own photos can stay out of the protocol.
+  expect(html.body).toContain('Fotodokumentace');
+  const hidden = await ctx.app.inject({
+    method: 'GET',
+    url: `/api/inspections/${open.id}/protocol.html?overview=hide`,
+    headers: bearer(token),
+  });
+  expect(hidden.body).not.toContain('Fotodokumentace');
+  // "Datum vydání" of the form comes from the equipment type.
+  const admin = (await ctx.login(info.accounts[0].email, info.accounts[0].password)).token;
+  const types = (
+    await ctx.app.inject({ method: 'GET', url: '/api/equipment-types', headers: bearer(admin) })
+  ).json() as { id: string; name: string; version: number }[];
+  const rack = types.find((t) => t.name === 'Regál')!;
+  const patched = await ctx.app.inject({
+    method: 'PATCH',
+    url: `/api/equipment-types/${rack.id}`,
+    headers: bearer(admin),
+    payload: { version: rack.version, formIssueDate: '2024-01-15' },
+  });
+  expect(patched.statusCode, patched.body).toBe(200);
+  const rackProtocol = await ctx.app.inject({
+    method: 'GET',
+    url: `/api/inspections/${open.id}/protocol.html?equipmentTypeIds=${rack.id}`,
+    headers: bearer(admin),
+  });
+  expect(rackProtocol.body).toContain('15/01/2024');
 
   // A visitor's change is gone after the reset; the showcase is back.
   await ctx.app.inject({

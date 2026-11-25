@@ -569,7 +569,7 @@ td, th { border: 0.75pt solid #000; padding: 0.8mm 1.2mm; vertical-align: middle
 .items .c-note { width: 70mm; }
 .items td { height: 7mm; overflow-wrap: anywhere; }
 .items .struck { text-decoration: line-through; text-decoration-thickness: 1.2pt; }
-.where { font-size: 8pt; }
+.where { font-size: 8pt; text-decoration: underline; text-underline-offset: 1.5px; }
 .small { font-size: 8pt; margin: 1mm 0 0; }
 .draft { border: 1.5pt solid #000; padding: 2mm 3mm; margin: 3mm 0; font-weight: 700; text-align: center; }
 .warning.new-page { page-break-before: always; }
@@ -591,7 +591,7 @@ td, th { border: 0.75pt solid #000; padding: 0.8mm 1.2mm; vertical-align: middle
 .photo-pages h2 { text-transform: none; }
 .sev { font-size: 11pt; text-align: left; margin: 3mm 0 1mm; text-transform: none; }
 .sev span { font-size: 8pt; font-weight: 400; color: #000; margin-left: 2mm; }
-.place { font-size: 8.5pt; margin: 1.5mm 0 1mm; }
+.place { font-size: 8.5pt; margin: 1.5mm 0 1mm; text-decoration: underline; text-underline-offset: 2px; }
 .sev { break-after: avoid; page-break-after: avoid; }
 .flow { column-gap: 2mm; }
 .flow.c1 { column-count: 1; } .flow.c2 { column-count: 2; } .flow.c3 { column-count: 3; }

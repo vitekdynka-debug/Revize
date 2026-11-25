@@ -154,6 +154,8 @@ export function createProtocolsService(
     forceAppendix = false,
     defectSeverities?: ProtocolData['defectSeverities'],
     shortest = false,
+    /** Leave out the inspection's own photos (Fotodokumentace), e.g. photos only for the office. */
+    hideOverview = false,
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of some equipment types contains only their items and their protocol texts.
@@ -196,11 +198,13 @@ export function createProtocolsService(
     for (const p of resultPhotos) {
       photosByItem.set(p.itemId, [...(photosByItem.get(p.itemId) ?? []), refOf(p)]);
     }
-    const overview = await db
-      .select({ storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey })
-      .from(photo)
-      .where(eq(photo.inspectionId, inspectionId))
-      .orderBy(photo.createdAt);
+    const overview = hideOverview
+      ? []
+      : await db
+          .select({ storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey })
+          .from(photo)
+          .where(eq(photo.inspectionId, inspectionId))
+          .orderBy(photo.createdAt);
     const overviewPhotos = overview.map(refOf);
 
     const inspectors = inspection.inspectors.map((i) => i.displayName);
@@ -262,8 +266,15 @@ export function createProtocolsService(
       .from(inspectionTable)
       .innerJoin(appUser, eq(appUser.id, inspectionTable.leadInspectorId))
       .where(eq(inspectionTable.id, inspection.id));
-    const issueDate =
-      settings.protocolIssueDate || czechDate((issued?.closedAt ?? new Date()).toISOString());
+    // "Datum vydání" is that of the protocol form of the type (fixed, in Typy vybavení); with
+    // several types the newest of their forms; otherwise Nastavení, else the closing date.
+    const formDates = types
+      .filter((t) => !equipmentTypeIds.length || equipmentTypeIds.includes(t.id))
+      .flatMap((t) => (t.formIssueDate ? [t.formIssueDate] : []))
+      .sort();
+    const issueDate = formDates.length
+      ? czechDate(formDates.at(-1)!)
+      : settings.protocolIssueDate || czechDate((issued?.closedAt ?? new Date()).toISOString());
     const version = settings.protocolVersion || String((issued?.reopenedCount ?? 0) + 1);
 
     const data: ProtocolData = {
@@ -384,6 +395,7 @@ export function createProtocolsService(
           options.forceAppendix,
           options.severities,
           options.shortest,
+          options.hideOverview,
         ),
         { part: options.part },
       );
@@ -406,6 +418,7 @@ export function createProtocolsService(
         options.forceAppendix,
         options.severities,
         options.shortest,
+        options.hideOverview,
       );
       const bytes = await pdf.render(
         renderProtocolHtml(data, { pageFrame: false, part: options.part }),
@@ -435,6 +448,7 @@ export function createProtocolsService(
         options.forceAppendix,
         options.severities,
         options.shortest,
+        options.hideOverview,
       );
       return {
         data: await renderProtocolDocx(data, options.part),
@@ -488,6 +502,8 @@ export interface ProtocolOptions {
   severities?: ('red' | 'amber' | 'green')[];
   /** The fewest pages (minimal photos, more columns) even within 8 pages. */
   shortest?: boolean;
+  /** Without the inspection's own photos (Fotodokumentace). */
+  hideOverview?: boolean;
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;
