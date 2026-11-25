@@ -887,6 +887,8 @@ export const useProtocolHtml = (
   shortest = false,
   /** Without the inspection's own photos (Fotodokumentace). */
   hideOverview = false,
+  /** The tables without the items that were not checked. */
+  hideUnchecked = false,
 ) =>
   useQuery<string, ApiRequestError>({
     queryKey: [
@@ -898,6 +900,7 @@ export const useProtocolHtml = (
       defects,
       shortest,
       hideOverview,
+      hideUnchecked,
     ],
     queryFn: async () =>
       (
@@ -909,6 +912,7 @@ export const useProtocolHtml = (
             defects: defects === 'all' ? undefined : defects,
             size: shortest ? 'shortest' : undefined,
             overview: hideOverview ? 'hide' : undefined,
+            unchecked: hideUnchecked ? 'hide' : undefined,
           })}`,
         )
       ).text(),

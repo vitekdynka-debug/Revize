@@ -388,6 +388,16 @@ describe('organization settings and protocol', () => {
     expect(withList).toContain('<th class="grey">Číslo TZ</th><th class="grey">Výrobce</th>');
     // Not fit for safe operation (the red defect): bold and red.
     expect(withList).toContain('<tr class="unsafe"><td>');
+    // Items without a result can be left out of the tables.
+    const listOf = async (query: string) =>
+      (
+        await api(
+          'GET',
+          `/api/inspections/${id}/protocol.html?appendix=always&columns=itemNumber,note${query}`,
+        )
+      ).body;
+    expect(await listOf('')).toContain('Nezkontrolováno');
+    expect(await listOf('&unchecked=hide')).not.toContain('Nezkontrolováno');
     const docxList = await api(
       'GET',
       `/api/inspections/${id}/protocol.docx?appendix=always&columns=itemNumber`,

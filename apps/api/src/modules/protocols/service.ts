@@ -151,6 +151,8 @@ export function createProtocolsService(
     shortest = false,
     /** Leave out the inspection's own photos (Fotodokumentace), e.g. photos only for the office. */
     hideOverview = false,
+    /** Leave items without a result out of the tables (protocol table and Příloha 1). */
+    hideUnchecked = false,
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of some equipment types contains only their items and their protocol texts.
@@ -160,6 +162,8 @@ export function createProtocolsService(
       .map((i) => ({ ...i, nextInspectionDate: projectedNextInspection(i, inspection) }));
     // Every day an item was checked on (an inspection may take two visits).
     const inspectionDays = checkDays(items, inspection.inspectionDate);
+    // The tables list every item of the inspection, or only the checked ones.
+    const listed = hideUnchecked ? items.filter((i) => i.result) : items;
     const daysText = inspectionDaysText({
       inspectionDate: inspection.inspectionDate,
       inspectionDays,
@@ -228,7 +232,7 @@ export function createProtocolsService(
           technik: inspectors.join(', '),
           datum_pristi_kontroly: czechDate(next),
         });
-        const rows: ProtocolItem[] = items
+        const rows: ProtocolItem[] = listed
           .filter((i) => i.equipmentTypeId === type.id)
           .map((i) => ({
             id: i.id,
@@ -310,7 +314,7 @@ export function createProtocolsService(
       note: inspection.note,
       sections,
       overviewPhotos,
-      appendix: appendixOf(types, items, columns.length ? columns : DEFAULT_APPENDIX_COLUMNS),
+      appendix: appendixOf(types, listed, columns.length ? columns : DEFAULT_APPENDIX_COLUMNS),
       forceAppendix,
       defectSeverities,
       shortest,
@@ -392,6 +396,7 @@ export function createProtocolsService(
           options.severities,
           options.shortest,
           options.hideOverview,
+          options.hideUnchecked,
         ),
         { part: options.part },
       );
@@ -415,6 +420,7 @@ export function createProtocolsService(
         options.severities,
         options.shortest,
         options.hideOverview,
+        options.hideUnchecked,
       );
       const bytes = await pdf.render(
         renderProtocolHtml(data, { pageFrame: false, part: options.part }),
@@ -445,6 +451,7 @@ export function createProtocolsService(
         options.severities,
         options.shortest,
         options.hideOverview,
+        options.hideUnchecked,
       );
       return {
         data: await renderProtocolDocx(data, options.part),
@@ -507,6 +514,8 @@ export interface ProtocolOptions {
   shortest?: boolean;
   /** Without the inspection's own photos (Fotodokumentace). */
   hideOverview?: boolean;
+  /** Without the items that were not checked in the tables. */
+  hideUnchecked?: boolean;
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;

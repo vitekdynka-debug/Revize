@@ -22,6 +22,8 @@ const querystring = z.object({
   size: z.enum(['auto', 'shortest']).default('auto'),
   /** `hide`: without the inspection's own photos (Fotodokumentace, e.g. only for the office). */
   overview: z.enum(['show', 'hide']).default('show'),
+  /** `hide`: the tables without the items that were not checked. */
+  unchecked: z.enum(['show', 'hide']).default('show'),
 });
 const SEVERITIES_OF = {
   red: ['red'],
@@ -37,9 +39,11 @@ const optionsOf = (q: {
   defects: keyof typeof SEVERITIES_OF;
   size: 'auto' | 'shortest';
   overview: 'show' | 'hide';
+  unchecked: 'show' | 'hide';
 }) => ({
   shortest: q.size === 'shortest',
   hideOverview: q.overview === 'hide',
+  hideUnchecked: q.unchecked === 'hide',
   severities: [...SEVERITIES_OF[q.defects]],
   equipmentTypeIds: [
     ...(q.equipmentTypeId ? [q.equipmentTypeId] : []),

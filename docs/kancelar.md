@@ -198,6 +198,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
         a víc sloupců závad, i když by se protokol vešel do 8 stran.
       - Přepínač **Fotodokumentace kontroly** (zapamatuje se): vypnutý vynechá celkové fotky
         kontroly (hala, přístup), třeba když jsou jen pro vás. Fotky závad zůstávají.
+      - Přepínač **Nezkontrolované v tabulce** (zapamatuje se): vypnutý vynechá artikly bez
+        výsledku z tabulky vybavení i z přílohy 1.
       - Volba _Všechny / Červené a žluté / Jen červené_ je vidět jen u kontrol s regály.
       - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
         U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají

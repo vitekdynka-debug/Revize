@@ -35,6 +35,7 @@ function loadColumns(): string[] {
 
 const SHORTEST_KEY = 'revize.protocol.shortest';
 const OVERVIEW_KEY = 'revize.protocol.hideOverview';
+const UNCHECKED_KEY = 'revize.protocol.hideUnchecked';
 
 function loadFlag(key: string): boolean {
   try {
@@ -180,6 +181,7 @@ export function ProtocolPreview({
   const [shortest, setShortest] = useState(loadShortest);
   // The inspection's own photos (Fotodokumentace) are sometimes only for the office.
   const [hideOverview, setHideOverview] = useState(() => loadFlag(OVERVIEW_KEY));
+  const [hideUnchecked, setHideUnchecked] = useState(() => loadFlag(UNCHECKED_KEY));
   // The choice of red / yellow defects only applies to types with risk levels (racks).
   const hasRiskLevels = types.some(
     (t) => (!typeIds.length || typeIds.includes(t.id)) && t.riskLevels,
@@ -194,6 +196,7 @@ export function ProtocolPreview({
     shownDefects,
     shortest,
     hideOverview,
+    hideUnchecked,
   );
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -208,6 +211,7 @@ export function ProtocolPreview({
         defects: shownDefects === 'all' ? undefined : shownDefects,
         size: shortest ? 'shortest' : undefined,
         overview: hideOverview ? 'hide' : undefined,
+        unchecked: hideUnchecked ? 'hide' : undefined,
         ...query,
       })}`,
       name,
@@ -324,6 +328,15 @@ export function ProtocolPreview({
             onChange={(e) => {
               setShortest(e.currentTarget.checked);
               saveShortest(e.currentTarget.checked);
+            }}
+          />
+          <Switch
+            label="Nezkontrolované v tabulce"
+            description="Artikly bez výsledku v tabulce vybavení i v příloze 1. Vypnuté: jen zkontrolované."
+            checked={!hideUnchecked}
+            onChange={(e) => {
+              setHideUnchecked(!e.currentTarget.checked);
+              saveFlag(UNCHECKED_KEY, !e.currentTarget.checked);
             }}
           />
           <Switch
