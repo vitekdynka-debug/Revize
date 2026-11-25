@@ -10,3 +10,5 @@ coverage/
 playwright-report/
 test-results/
 **/e2e/.generated/
+# Built by build:demo (showcase database of the browser demo)
+apps/web/demo-data/

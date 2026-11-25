@@ -10,9 +10,29 @@
 		reverse_proxy {$API_UPSTREAM:api:3000}
 	}
 
-	# The service worker and the app shells must never be cached, otherwise updates hang.
-	@nocache path / /index.html /sw.js /registerSW.js /manifest.webmanifest /spike/ /spike/index.html /spike/sw.js /spike/manifest.webmanifest
+	# The service workers and the app shells must never be cached, otherwise updates hang.
+	@nocache path / /index.html /sw.js /admin/ /admin/index.html /admin/sw.js /admin/registerSW.js /admin/manifest.webmanifest /ukazka/ /ukazka/index.html /ukazka/sw.js /ukazka/manifest.webmanifest /spike/ /spike/index.html /spike/sw.js /spike/manifest.webmanifest
 	header @nocache Cache-Control "no-cache"
+
+	# The office app lives under /admin/ (ADR-0023); its old addresses (bookmarks, the app on
+	# the iPad's home screen) lead there. /sw.js replaces the old service worker at /.
+	@legacy path /teren /teren/* /kontroly /kontroly/* /zakaznici /zakaznici/* /artikly /artikly/* /typy /typy/* /import /uzivatele /nastaveni /historie-zmen /navody /navody/* /ucet /prihlaseni
+	redir @legacy /admin{uri} 308
+	redir /admin /admin/ 308
+	redir /ukazka /ukazka/ 308
+
+	handle /admin/* {
+		root * /srv
+		try_files {path} /admin/index.html
+		file_server
+	}
+
+	# The demo with fictitious data running in the visitor's browser (no server data).
+	handle /ukazka/* {
+		root * /srv
+		try_files {path} /ukazka/index.html
+		file_server
+	}
 
 	handle /spike/* {
 		root * /srv
@@ -20,8 +40,9 @@
 		file_server
 	}
 
+	# Landing page.
 	handle {
-		root * /srv
+		root * /srv/landing
 		try_files {path} /index.html
 		file_server
 	}

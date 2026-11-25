@@ -55,7 +55,8 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
     `src/demo/transport.ts` and aliases Node modules to `src/demo/shims` (ADR-0015).
   - e2e (`apps/web/e2e`) runs the real API on a fresh database (`e2e/start-api.mjs`); Mantine
     selects have the `combobox` role.
-- `deploy/` – Caddyfile and the web image (office app at `/`, QR spike at `/spike/`, proxies `/api`).
+- `deploy/` – Caddyfile and the web image: landing page at `/` (`deploy/landing`, kill-switch `sw.js`),
+  app at `/admin/` (old paths redirect), browser demo at `/ukazka/`, QR spike at `/spike/`, proxies `/api`.
 - `docker-compose.yml` + `.env.example` – db, api, web; `scripts/smoke-test.sh` checks a running stack.
 - `docs/` – `architecture.md`, `kancelar.md` (office guide), `teren.md` (field guide), `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
 
@@ -170,4 +171,7 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   `seed/showcase.ts` (fictitious customer, 50+ items, drawn photos in `apps/api/assets/showcase`,
   a closed and an open inspection) and resets nightly (`src/showcase.ts`); `GET /api/showcase`
   gives the login page its accounts. Type settings export/import (`/equipment-types/export|import`).
+  One web container (ADR-0023 addendum): `build:demo` first builds a PGlite snapshot of the
+  showcase (`apps/api/scripts/showcase-snapshot.ts` → `apps/web/demo-data/`, gitignored) that the
+  demo loads with `loadDataDir`; the demo outbox uses its own IndexedDB (`revize-field-demo`).
 - Next: M1 decision PWA vs Capacitor.

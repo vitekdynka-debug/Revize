@@ -50,10 +50,43 @@ const canvasImages: ImageProcessor = {
   },
 };
 
+/**
+ * The showcase database built with the demo (`build:demo`, ADR-0023): a first visit starts
+ * from it (customer, items, photos, inspections) instead of seeding in the browser.
+ */
+const snapshots = import.meta.glob<string>('../../demo-data/showcase.tar.gz', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+});
+const snapshotUrl = Object.values(snapshots)[0];
+
+async function databaseExists(): Promise<boolean> {
+  try {
+    const databases = await indexedDB.databases();
+    return databases.some((d) => d.name === `/pglite/${DATABASE_NAME}`);
+  } catch {
+    // Unknown: keep whatever is there.
+    return true;
+  }
+}
+
+async function open(): Promise<PGlite> {
+  if (snapshotUrl && !(await databaseExists())) {
+    try {
+      const loadDataDir = await (await fetch(snapshotUrl)).blob();
+      return await PGlite.create(`idb://${DATABASE_NAME}`, { loadDataDir });
+    } catch {
+      // No snapshot (offline first visit): an empty database gets the plain demo data.
+    }
+  }
+  return PGlite.create(`idb://${DATABASE_NAME}`);
+}
+
 let started: Promise<{ client: PGlite; api: DemoApi }> | null = null;
 
 function demo() {
-  started ??= PGlite.create(`idb://${DATABASE_NAME}`).then(async (client) => ({
+  started ??= open().then(async (client) => ({
     client,
     api: await createDemoApi(client, migrations, canvasImages),
   }));

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "playwright test",
-    "build:demo": "tsc -p tsconfig.json --noEmit && vite build --mode demo",
+    "build:demo": "pnpm --filter @revize/api showcase:snapshot ../web/demo-data/showcase.tar.gz && tsc -p tsconfig.json --noEmit && vite build --mode demo",
     "e2e:demo": "playwright test -c playwright.demo.config.ts"
   },
   "dependencies": {

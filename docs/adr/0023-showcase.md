@@ -35,3 +35,22 @@ desítky sekund.
 
 - Na serveru běží dvě aplikace v Dokploy; ukázka má vlastní doménu a vlastní heslo k databázi.
 - Účty a data ukázky jsou veřejné: nikdy do ní nenahrávat skutečné údaje zákazníků.
+
+## Doplnění (2026-11-25): jeden kontejner, ukázka v prohlížeči
+
+Na doporučení správce serveru nepotřebuje ukázka vlastní aplikaci v Dokploy:
+
+- Kontejner `web` servíruje **úvodní stránku** na `/` (`deploy/landing`), aplikaci na `/admin/`
+  a ukázku na `/ukazka/` (sestavení `build:demo`, API v prohlížeči na PGlite, ADR-0015).
+- Data ukázky se **předpřipraví při sestavení**: `apps/api/scripts/showcase-snapshot.ts` spustí
+  migrace a `seedShowcase` v PGlite (s fotkami a náhledy přes sharp) a uloží adresář databáze
+  (`dumpDataDir`, ~5 MB). Prohlížeč ho při první návštěvě jen načte (`loadDataDir`), takže
+  ukázka naběhne za pár sekund místo desítek. Hesla účtů ukázky se přehashují funkcí, kterou
+  používá prohlížečová verze.
+- Ukázka má vlastní IndexedDB pro frontu zápisů (`revize-field-demo`), aby se na stejné adrese
+  nemíchala s ostrou aplikací.
+- Staré adresy aplikace se přesměrují pod `/admin/` (Caddy 308). Původní service worker
+  aplikace s rozsahem `/` nahradí `deploy/landing/sw.js`, který smaže jeho mezipaměti, odregistruje
+  se a otevřená okna přesměruje na `/admin/…`; aplikace přidaná na plochu iPadu tak funguje dál.
+- Serverová instance (`SHOWCASE=true`, `docker-compose.showcase.yml`) zůstává jako volitelná
+  varianta se serverovým PDF a společnými daty.

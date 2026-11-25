@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Revize – evidence a kontroly technického vybavení</title>
+    <meta
+      name="description"
+      content="Evidence vybavení zákazníků, kontroly v terénu na iPadu i bez signálu, fotky závad a protokoly podle norem."
+    />
+    <link rel="icon" href="/admin/icon.svg" type="image/svg+xml" />
+    <script>
+      // The app installed on the home screen (or opened from it) goes straight to the app.
+      if (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        navigator.standalone === true
+      ) {
+        location.replace('/admin/');
+      }
+    </script>
+    <style>
+      :root {
+        --blue: #1c7ed6;
+        --blue-dark: #1864ab;
+        --ink: #212529;
+        --muted: #5c636a;
+        --line: #dee2e6;
+        --soft: #f1f5f9;
+        --red: #e03131;
+        --amber: #f59f00;
+        --green: #2f9e44;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        color: var(--ink);
+        background: #fff;
+        line-height: 1.55;
+      }
+      a {
+        color: var(--blue);
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+      }
+      header .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .brand {
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: 0.3px;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 22px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 2px solid var(--blue);
+      }
+      .btn.primary {
+        background: var(--blue);
+        color: #fff;
+      }
+      .btn.primary:hover {
+        background: var(--blue-dark);
+        border-color: var(--blue-dark);
+      }
+      .btn.ghost {
+        color: var(--blue);
+        background: #fff;
+      }
+      .btn.small {
+        padding: 8px 16px;
+      }
+      .hero {
+        background: linear-gradient(180deg, var(--soft), #fff);
+        padding: 64px 0 48px;
+      }
+      .hero .wrap {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+      h1 {
+        font-size: clamp(30px, 4.2vw, 46px);
+        line-height: 1.15;
+        margin: 0 0 16px;
+      }
+      .lead {
+        font-size: 19px;
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .note {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 14px;
+      }
+      .shot {
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+        background: #fff;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      section {
+        padding: 56px 0;
+      }
+      h2 {
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 32px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 22px;
+      }
+      .card h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        background: var(--soft);
+        margin-bottom: 12px;
+      }
+      .levels {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .levels span {
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        padding: 3px 10px;
+        border-radius: 999px;
+      }
+      .band {
+        background: var(--soft);
+      }
+      .photos {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .photos figure {
+        margin: 0;
+      }
+      .photos img {
+        width: 100%;
+        border-radius: 10px;
+        display: block;
+      }
+      .photos figcaption {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .steps {
+        counter-reset: step;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+      }
+      .steps li {
+        counter-increment: step;
+      }
+      .steps li::before {
+        content: counter(step);
+        display: inline-grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .cta {
+        text-align: center;
+      }
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 24px 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      @media (max-width: 820px) {
+        .hero .wrap,
+        .grid,
+        .photos,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          padding-top: 36px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <div class="brand">Revize</div>
+        <a class="btn ghost small" href="/admin/">Přihlásit se</a>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="wrap">
+        <div>
+          <h1>Kontroly technického vybavení bez papírů</h1>
+          <p class="lead">
+            Evidence regálů, žebříků, vázacích prostředků a dalšího vybavení zákazníků. Kontrola v
+            terénu na iPadu i bez signálu, fotky závad se šipkou a protokol v PDF hned po kontrole.
+          </p>
+          <div class="actions">
+            <a class="btn primary" href="/ukazka/">Vyzkoušet ukázku</a>
+            <a class="btn ghost" href="/admin/">Přihlásit se</a>
+          </div>
+          <p class="note">
+            Ukázka běží jen ve vašem prohlížeči se smyšlenými daty – můžete v ní cokoli zkoušet.
+          </p>
+        </div>
+        <div class="shot">
+          <img
+            src="img/regal-ohnuty-stojan.jpg"
+            alt="Ilustrační fotka regálu s červenou šipkou na ohnutém stojanu"
+            width="1600"
+            height="1200"
+          />
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <div class="wrap">
+        <h2>Co systém umí</h2>
+        <p class="sub">Od evidence u zákazníka přes kontrolu v hale až po protokol a export.</p>
+        <div class="grid">
+          <div class="card">
+            <div class="icon">📱</div>
+            <h3>Terén na iPadu</h3>
+            <p>
+              Seznam podle hal a řad, skenování QR štítků, číselník s označením. Funguje i bez
+              signálu, nic se neztratí.
+            </p>
+          </div>
+          <div class="card">
+            <div class="icon">📷</div>
+            <h3>Fotky závad</h3>
+            <p>
+              Vyfotit, otočit, oříznout a ukázat šipkou nebo kolečkem přesně na závadu. Fotky jdou
+              rovnou do protokolu.
+            </p>
+          </div>
+          <div class="card">
+            <div class="icon">🚦</div>
+            <h3>Hodnocení podle norem</h3>
+            <p>Regály podle ČSN EN 15635, ostatní vybavení vyhovuje / nevyhovuje.</p>
+            <div class="levels">
+              <span style="background: var(--green)">zelená</span>
+              <span style="background: var(--amber)">žlutá</span>
+              <span style="background: var(--red)">červená</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="icon">📄</div>
+            <h3>Protokoly</h3>
+            <p>
+              PDF i Word podle vašeho formuláře, příloha s tabulkou vybavení, data příští kontroly
+              podle intervalů.
+            </p>
+          </div>
+          <div class="card">
+            <div class="icon">✅</div>
+            <h3>Kontrolní body</h3>
+            <p>
+              ANO / NE u každého artiklu (kotvení, štítek s nosností…). Při NE se závada zapíše
+              sama.
+            </p>
+          </div>
+          <div class="card">
+            <div class="icon">📊</div>
+            <h3>Import a exporty</h3>
+            <p>
+              Převzetí evidence z Excelu, export výsledků a celé databáze s historií, fotky v ZIP s
+              popisy.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="wrap">
+        <h2>Závada na první pohled</h2>
+        <p class="sub">Ilustrační fotky z ukázky – takhle vypadají fotky závad v protokolu.</p>
+        <div class="photos">
+          <figure>
+            <img src="img/zebrik-praskla-pricka.jpg" alt="Žebřík s prasklou příčkou v kroužku" />
+            <figcaption>Prasklá příčka žebříku – nevyhovuje</figcaption>
+          </figure>
+          <figure>
+            <img src="img/regal-chybi-pojistka.jpg" alt="Nosník regálu bez pojistky v kroužku" />
+            <figcaption>Chybí pojistka nosníku – červené riziko</figcaption>
+          </figure>
+          <figure>
+            <img src="img/vazak-poskozeny.jpg" alt="Prořezaný popruh v kroužku" />
+            <figcaption>Prořezaný vázací popruh – vyřazen</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Jak to probíhá</h2>
+        <p class="sub">Čtyři kroky od zákazníka k hotovému protokolu.</p>
+        <ol class="steps">
+          <li>
+            <h3>Evidence</h3>
+            <p>Import vybavení z Excelu nebo založení přímo na místě.</p>
+          </li>
+          <li>
+            <h3>Kontrola</h3>
+            <p>Technik prochází haly s iPadem, skenuje štítky a zapisuje výsledky.</p>
+          </li>
+          <li>
+            <h3>Kancelář</h3>
+            <p>Kontrola výsledků, úpravy, uzavření a data příští kontroly.</p>
+          </li>
+          <li>
+            <h3>Protokol</h3>
+            <p>PDF nebo Word pro zákazníka, exporty a fotky v ZIP.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="band cta">
+      <div class="wrap">
+        <h2>Vyzkoušejte si to</h2>
+        <p class="sub">
+          Ukázka obsahuje smyšleného zákazníka s desítkami artiklů, fotkami a rozpracovanou
+          kontrolou.
+        </p>
+        <div class="actions" style="justify-content: center">
+          <a class="btn primary" href="/ukazka/">Otevřít ukázku</a>
+          <a class="btn ghost" href="/admin/">Přihlásit se do aplikace</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">Revize – evidence a kontroly technického vybavení.</div>
+    </footer>
+  </body>
+</html>

@@ -86,30 +86,32 @@ docker compose ps                     # db, api a web: healthy
 scripts/smoke-test.sh https://revize.vase-domena.cz admin@firma.cz '<heslo>'
 ```
 
-- Kancelář je na `https://<adresa>/`, terén na `https://<adresa>/teren`, test skeneru na
-  `https://<adresa>/spike/` a dokumentace API na `https://<adresa>/api/docs`.
-- Technici: v kanceláři **Uživatelé → Nový uživatel** s rolí Technik. Na iPadu otevřete adresu
-  v Safari a zvolte **Sdílet → Přidat na plochu**.
+- Na `https://<adresa>/` je úvodní stránka (landing page) s odkazy na ukázku a přihlášení.
+- Aplikace (kancelář i terén) je na `https://<adresa>/admin/`, terén na
+  `https://<adresa>/admin/teren`, ukázka se smyšlenými daty na `https://<adresa>/ukazka/`, test
+  skeneru na `https://<adresa>/spike/` a dokumentace API na `https://<adresa>/api/docs`.
+  Staré adresy aplikace (`/teren`, `/kontroly`…) se samy přesměrují pod `/admin/`; iPad s
+  aplikací na ploše se přesměruje sám, znovu ji přidávat není nutné.
+- Technici: v kanceláři **Uživatelé → Nový uživatel** s rolí Technik. Na iPadu otevřete
+  `https://<adresa>/admin/` v Safari a zvolte **Sdílet → Přidat na plochu**.
 
-## Ukázka pro prezentace (samostatná instance)
+## Ukázka pro prezentace
 
-Na stejném serveru může běžet **ukázková instance** se smyšlenými daty, kterou můžete
-předvádět a nechat si s ní lidi hrát. Má vlastní databázi i fotky, s ostrou instancí nesdílí
-nic. Každou noc ve 3:00 se vrátí do výchozího stavu (ADR-0023).
+Ukázka na `https://<adresa>/ukazka/` je součástí kontejneru `web`, nic dalšího se nenasazuje.
+Celá běží **v prohlížeči návštěvníka** (databáze PGlite, ADR-0015): smyšlený zákazník
+_Logistika Vzor s.r.o._ s desítkami artiklů, fotkami a dvěma kontrolami je předpřipravený při
+sestavení obrazu, takže se načte během pár sekund. Na server se z ní nic neposílá a s ostrou
+databází nesdílí nic; každý návštěvník má vlastní kopii a vrátí ji do výchozího stavu v menu
+**Obnovit ukázková data**. PDF se v ukázce tiskne z prohlížeče, Word a exporty fungují.
 
-1. V Dokploy založte **novou** aplikaci typu Docker Compose ze stejného repozitáře a větve
-   `produkce`, soubor `docker-compose.showcase.yml`.
-2. Proměnné: `POSTGRES_PASSWORD` (jiné než u ostré instance), `TRUSTED_ORIGINS`
-   (např. `https://ukazka.vase-domena.cz`), volitelně `SHOWCASE_PASSWORD` (heslo účtů ukázky,
-   výchozí `ukazka-revize`; je vidět na přihlašovací stránce) a `SHOWCASE_RESET_HOUR` (hodina
-   obnovy, `-1` = bez obnovy).
-3. Doménu (např. `ukazka.vase-domena.cz`) nasměrujte na službu `web`, port 80.
-4. Po nasazení se databáze sama naplní (pár sekund). Přihlašovací stránka nabízí účty
-   _Administrátor_ a _Technik_.
+**Samostatná instance (volitelně):** pokud byste chtěli ukázku se serverovým PDF a společnými
+daty pro všechny, jde pořád spustit `docker-compose.showcase.yml` jako druhou aplikaci v Dokploy
+(proměnné `POSTGRES_PASSWORD`, `TRUSTED_ORIGINS`, volitelně `SHOWCASE_PASSWORD` a
+`SHOWCASE_RESET_HOUR`, vlastní doména na službu `web`, port 80). Běžně potřeba není.
 
 **Vlastní typy vybavení v ukázce:** v ostré instanci Typy vybavení → _Stáhnout nastavení_, soubor
-uložte do repozitáře jako `apps/api/assets/showcase/typy-vybaveni.json` (nebo ho v ukázce nahrajte
-tlačítkem _Nahrát nastavení_ – do noční obnovy).
+uložte do repozitáře jako `apps/api/assets/showcase/typy-vybaveni.json`; použije se při dalším
+sestavení.
 
 ## Zálohy
 

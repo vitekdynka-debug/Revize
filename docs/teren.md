@@ -1,6 +1,7 @@
 # Terén – návod pro techniky (M5)
 
-Terénní režim je na adrese `https://<server>/teren` a v ukázkové verzi na
+Terénní režim je na adrese `https://<server>/admin/teren` (ukázka se smyšlenými daty na
+`https://<server>/ukazka/teren`) a v ukázkové verzi na
 `https://vitekdynka-debug.github.io/Revize/app/teren`. Technik (role Technik) se sem dostane
 rovnou po přihlášení, administrátor přes menu **Kontroly v terénu**.
 

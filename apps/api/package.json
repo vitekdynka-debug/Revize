@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/cli/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=.env src/cli/seed.ts",
-    "user:create": "tsx --env-file-if-exists=.env src/cli/create-user.ts"
+    "user:create": "tsx --env-file-if-exists=.env src/cli/create-user.ts",
+    "showcase:snapshot": "tsx scripts/showcase-snapshot.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",

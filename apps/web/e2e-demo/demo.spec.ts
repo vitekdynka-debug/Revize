@@ -9,6 +9,8 @@ test('demo runs the whole app in the browser and keeps its data', async ({ page 
     timeout: 60_000,
   });
   await expect(page.getByText('Demo', { exact: true })).toBeVisible();
+  // The showcase customer comes with the prebuilt database (ADR-0023).
+  await expect(page.getByRole('cell', { name: 'Logistika Vzor s.r.o.' })).toBeVisible();
 
   // A write through the real service rules, then a reload: data and session stay.
   await page.getByRole('button', { name: 'Nový zákazník' }).click();

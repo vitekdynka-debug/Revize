@@ -58,7 +58,9 @@ class FieldDatabase extends Dexie {
   photos!: EntityTable<PhotoBlobRow, 'id'>;
 
   constructor() {
-    super('revize-field');
+    // The demo (/ukazka/) shares the origin with the real app (/admin/): its own database, so
+    // nothing written in the demo can ever reach the real outbox (ADR-0023).
+    super(import.meta.env.VITE_DEMO === 'true' ? 'revize-field-demo' : 'revize-field');
     this.version(1).stores({
       snapshots: 'key',
       outbox: '++seq, &id, status, inspectionId, itemId',
