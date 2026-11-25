@@ -25,6 +25,7 @@ import {
   type InspectionItem,
   type ProtocolData,
   type ProtocolItem,
+  itemTypeLabel,
   withCheckedAtColumn,
 } from '@revize/shared';
 import { eq, inArray } from 'drizzle-orm';
@@ -233,6 +234,7 @@ export function createProtocolsService(
             id: i.id,
             itemNumber: i.itemNumber,
             designation: i.designation,
+            typeLabel: itemTypeLabel(type, i.fieldValues),
             location: i.locationPath.join(LOCATION_SEPARATOR),
             details: displayFields(type.fieldDefinitions, i.fieldValues)
               .slice(0, DETAIL_FIELDS)

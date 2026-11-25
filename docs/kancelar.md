@@ -60,7 +60,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      všechny vybrané artikly; _Jen u artiklů, kde údaj chybí_ nepřepíše vyplněné hodnoty.
    - V seznamu je u artiklu druh a typ, např. _Příruční regál_: typové označení artiklu (pole
      _Systém / typové označení_), jinak hodnota pole _Typ regálu_ (u žebříků _Typ žebříku_),
-     a název typu.
+     a název typu. Pole _Podtyp_ se připojí za název, např. _Ruční vozík na deskový materiál_.
+     Takhle je artikl uvedený i ve sloupci _Typ vybavení_ přílohy 1 a v protokolu, kde nemá číslo
+     TZ ani označení, stojí v prvním sloupci místo nich.
    - **Filtry podle kontrol:** _Příští kontrola_ (po termínu, do 30 / 60 / 90 dní) a _Poslední
      kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
      kontrole své provozovny, která zahrnovala jeho typ, ale nemá v ní výsledek). Filtry platí

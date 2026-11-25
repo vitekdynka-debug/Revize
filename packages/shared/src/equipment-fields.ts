@@ -280,8 +280,18 @@ export function itemTypeLabel(
   const kind =
     valueOf(active.find((f) => /typov[éeý]\s+označení/i.test(f.label))) ||
     valueOf(active.find((f) => f.kind === 'select' && /^(typ|druh)\b/i.test(f.label)));
-  if (!kind) return type.name;
-  const name = type.name.trim();
+  // "Podtyp" follows the name: "Ruční vozík" + "na deskový materiál".
+  const subtype = valueOf(active.find((f) => /^pod\s*typ/i.test(f.label.trim())));
+  const base = kindAndName(type.name, kind);
+  if (!subtype || base.toLocaleLowerCase('cs').includes(subtype.toLocaleLowerCase('cs'))) {
+    return base;
+  }
+  return `${base} ${subtype}`;
+}
+
+function kindAndName(typeName: string, kind: string): string {
+  if (!kind) return typeName;
+  const name = typeName.trim();
   const lowerKind = kind.toLocaleLowerCase('cs');
   const lowerName = name.toLocaleLowerCase('cs');
   const capitalized = kind.charAt(0).toLocaleUpperCase('cs') + kind.slice(1);

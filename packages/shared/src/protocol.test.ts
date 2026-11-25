@@ -9,6 +9,7 @@ import {
   inspectionIntervalOf,
   nextInspectionDateOf,
   placeOf,
+  protocolItemTitle,
   protocolPageHeader,
   protocolTextHtml,
   renderProtocolHtml,
@@ -210,5 +211,23 @@ describe('dates of the check', () => {
     // Unchecked: what it had; closed: what closing wrote.
     expect(projectedNextInspection({ ...checked, result: null }, open)).toBe('2025-11-01');
     expect(projectedNextInspection(checked, { ...open, status: 'closed' })).toBe('2025-11-01');
+  });
+});
+
+describe('protocolItemTitle', () => {
+  it('names an item by number, designation, else its own type', () => {
+    expect(protocolItemTitle({ itemNumber: '10001', designation: 'A', typeLabel: 'Žebřík' })).toBe(
+      'TZ: 10001',
+    );
+    expect(protocolItemTitle({ itemNumber: null, designation: 'R-1', typeLabel: 'Regál' })).toBe(
+      'R-1',
+    );
+    expect(
+      protocolItemTitle({
+        itemNumber: null,
+        designation: null,
+        typeLabel: 'Ruční vozík na deskový materiál',
+      }),
+    ).toBe('Ruční vozík na deskový materiál');
   });
 });

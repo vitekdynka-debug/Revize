@@ -139,6 +139,11 @@ export interface ProtocolItem {
   itemNumber: string | null;
   /** "Ž-01", printed before the description. */
   designation?: string | null;
+  /**
+   * The item's own type ("Ruční vozík na deskový materiál", `itemTypeLabel`): names the item
+   * when it has neither číslo TZ nor designation.
+   */
+  typeLabel?: string;
   location: string;
   /** Name with description: the type and selected field values ("Alve · Opěrný · 8 příček"). */
   details: string;
@@ -386,9 +391,21 @@ export function protocolItemNumber(itemNumber: string | null): string {
   return itemNumber ? `TZ: ${itemNumber}` : '';
 }
 
+/**
+ * The first column of the protocol table: "TZ: 10001", else the designation, else the item's
+ * own type (neither number nor designation).
+ */
+export function protocolItemTitle(
+  i: Pick<ProtocolItem, 'itemNumber' | 'designation' | 'typeLabel'>,
+): string {
+  if (i.itemNumber) return protocolItemNumber(i.itemNumber);
+  return i.designation || i.typeLabel || '';
+}
+
 /** Title of a compact defect card: number, designation and the rest of the location. */
 export function defectCardTitle(d: ProtocolDefect): string {
-  return [protocolItemNumber(d.itemNumber), d.designation, placeOf(d.location).rest]
+  const name = d.itemNumber || d.designation ? null : (d.typeLabel ?? null);
+  return [protocolItemNumber(d.itemNumber), d.designation, name, placeOf(d.location).rest]
     .filter(Boolean)
     .join(' · ');
 }
@@ -646,7 +663,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     const yes = safeToOperate(i.outcome) === true;
     const answered = i.outcome !== 'unchecked';
     // Without číslo TZ (racks) the designation identifies the item in the first column.
-    const shownNumber = i.itemNumber ? protocolItemNumber(i.itemNumber) : (i.designation ?? '');
+    const shownNumber = protocolItemTitle(i);
     return `<tr><td>${escape(shownNumber)}</td><td>${
       i.designation && i.itemNumber ? `<strong>${escape(i.designation)}</strong> ` : ''
     }${escape(i.details)}${

@@ -7,8 +7,8 @@ import {
   formatDate,
   parseProtocolText,
   defectCardTitle,
+  protocolItemTitle,
   inspectionDaysText,
-  protocolItemNumber,
   protocolDefectGroups,
   protocolLayout,
   SEVERITY_GROUP_TITLE,
@@ -299,7 +299,7 @@ function itemRow(i: ProtocolItem) {
     cantSplit: true,
     height: { value: mm(9), rule: 'atLeast' },
     children: [
-      cell(lines([i.itemNumber ? protocolItemNumber(i.itemNumber) : (i.designation ?? '')])),
+      cell(lines([protocolItemTitle(i)])),
       cell(new Paragraph({ children: description })),
       answer('ANO', yes === false),
       answer('NE', yes === true),

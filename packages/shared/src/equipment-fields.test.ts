@@ -187,4 +187,18 @@ describe('itemTypeLabel', () => {
       'Příruční regál',
     );
   });
+
+  it('puts the subtype after the name', () => {
+    const cart = {
+      name: 'Ruční vozík',
+      fieldDefinitions: fieldDefinitionsSchema.parse([
+        { key: 'subtype', label: 'Podtyp', kind: 'text', required: false, order: 0 },
+      ]),
+    };
+    expect(itemTypeLabel(cart, { subtype: 'na deskový materiál' })).toBe(
+      'Ruční vozík na deskový materiál',
+    );
+    expect(itemTypeLabel(cart, { subtype: '' })).toBe('Ruční vozík');
+    expect(itemTypeLabel(cart, { subtype: 'vozík' })).toBe('Ruční vozík');
+  });
 });

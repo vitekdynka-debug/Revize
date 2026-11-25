@@ -6,6 +6,7 @@ import type { InspectionItem, Severity } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
 import { formatDate, formatDateTime, localDay } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
+import { itemTypeLabel } from './equipment-fields.js';
 import {
   FIT_DEFECT_TITLES,
   FIT_LABELS,
@@ -451,7 +452,7 @@ export function appendixRow(
       case 'designation':
         return item.designation ?? '';
       case 'type':
-        return type?.name ?? '';
+        return type ? itemTypeLabel(type, item.fieldValues) : '';
       case 'location':
         return item.locationPath.join(LOCATION_SEPARATOR);
       case 'qrCode':
